@@ -51,7 +51,7 @@ export default function StaffLogin() {
                 密钥
               </label>
               <input
-                type="password"
+                type="text"
                 value={keyword}
                 onChange={(e) => {
                   setKeyword(e.target.value)
@@ -60,6 +60,8 @@ export default function StaffLogin() {
                 placeholder="请输入工作人员密钥"
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-600 transition-colors bg-white"
                 style={{ color: '#1f2937' }}
+                autoComplete="off"
+                autoCapitalize="off"
                 onKeyPress={(e) => {
                   if (e.key === 'Enter') {
                     handleLogin()
