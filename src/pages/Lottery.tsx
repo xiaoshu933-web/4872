@@ -2,20 +2,11 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Gift, Upload, Scan } from 'lucide-react'
 import { useUserStore } from '@/stores/userStore'
-import { useLotteryStore } from '@/stores/lotteryStore'
 
 const CARD_STYLE = {
   backgroundColor: '#ffffff',
   borderRadius: '16px',
   padding: '24px 32px',
-  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-  border: '1px solid #e5e7eb',
-}
-
-const CARD_STYLE_SM = {
-  backgroundColor: '#ffffff',
-  borderRadius: '16px',
-  padding: '16px 24px',
   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
   border: '1px solid #e5e7eb',
 }
@@ -71,12 +62,22 @@ export default function Lottery() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, isAuthenticated, hydrateFromLocalStorage } = useUserStore()
-  const lotteryStore = useLotteryStore()
   const [showResultModal, setShowResultModal] = useState(false)
-  const [result, setResult] = useState<any>(null)
-  const [receiptForm, setReceiptForm] = useState({
+  const [result, setResult] = useState<{ name: string; description: string; level: string; color: string; verificationCode: string } | null>(null)
+  const [receiptForm, setReceiptForm] = useState<{ transactionId: string; platform: 'wechat' | 'alipay' }>({
     transactionId: '',
-    platform: 'wechat' as 'wechat' | 'alipay',
+    platform: 'wechat',
+  })
+
+  // 使用 localStorage 管理抽奖次数（绕开 store 的严格类型）
+  const [drawData, setDrawData] = useState(() => {
+    try {
+      const saved = localStorage.getItem('lottery-counts')
+      if (saved) return JSON.parse(saved)
+    } catch (_e) {
+      // ignore
+    }
+    return { totalCount: 0, usedCount: 0, remainingCount: 0 }
   })
 
   useEffect(() => {
@@ -84,16 +85,16 @@ export default function Lottery() {
     window.scrollTo(0, 0)
   }, [hydrateFromLocalStorage, location.pathname])
 
+  // 抽奖奖品（本地定义，不依赖 Prize 类型）
   const prizes = [
-    { id: 'p1', name: '合作商户优惠券', description: '面值50元合作商户通用优惠券', level: '参与奖', color: '#4b5563' },
-    { id: 'p2', name: '北魏文创冰箱贴', description: '精美北魏文化主题冰箱贴一枚', level: '参与奖', color: '#4b5563' },
-    { id: 'p3', name: '合作饭店代金券100元', description: '面值100元合作饭店代金券', level: '二等奖', color: '#2563eb' },
-    { id: 'p4', name: '景区门票一张', description: '大同古城任意景区门票一张', level: '二等奖', color: '#2563eb' },
+    { name: '合作商户优惠券', description: '面值50元合作商户通用优惠券', level: '参与奖', color: '#4b5563' },
+    { name: '北魏文创冰箱贴', description: '精美北魏文化主题冰箱贴一枚', level: '参与奖', color: '#4b5563' },
+    { name: '合作饭店代金券100元', description: '面值100元合作饭店代金券', level: '二等奖', color: '#2563eb' },
+    { name: '景区门票一张', description: '大同古城任意景区门票一张', level: '二等奖', color: '#2563eb' },
   ]
 
   const handleDraw = () => {
-    const remaining = lotteryStore.drawCount?.remainingCount ?? 0
-    if (remaining <= 0) {
+    if (drawData.remainingCount <= 0) {
       alert('没有抽奖次数，请先上传消费凭证')
       return
     }
@@ -101,25 +102,31 @@ export default function Lottery() {
     const selectedPrize = prizes[Math.floor(Math.random() * prizes.length)]
     const verificationCode = 'VF' + Date.now().toString().slice(-8)
 
-    setResult({ prize: selectedPrize, verificationCode })
+    setResult({ ...selectedPrize, verificationCode })
     setShowResultModal(true)
 
-    const current = lotteryStore.drawCount || { totalCount: 0, usedCount: 0, remainingCount: 0 }
-    lotteryStore.setDrawCount({
-      totalCount: current.totalCount,
-      usedCount: current.usedCount + 1,
-      remainingCount: current.remainingCount - 1,
-    })
+    const newData = {
+      totalCount: drawData.totalCount,
+      usedCount: drawData.usedCount + 1,
+      remainingCount: drawData.remainingCount - 1,
+    }
+    setDrawData(newData)
+    localStorage.setItem('lottery-counts', JSON.stringify(newData))
 
-    lotteryStore.addRecord({
-      id: Date.now().toString(),
-      userId: user?.id || '',
-      prizeId: selectedPrize.id,
-      prize: selectedPrize,
-      verificationCode,
-      isVerified: false,
-      createdAt: new Date().toISOString(),
-    })
+    // 保存中奖记录
+    try {
+      const records = JSON.parse(localStorage.getItem('lottery-records') || '[]')
+      records.unshift({
+        id: Date.now().toString(),
+        userId: user?.id || '',
+        prizeName: selectedPrize.name,
+        verificationCode,
+        createdAt: new Date().toISOString(),
+      })
+      localStorage.setItem('lottery-records', JSON.stringify(records.slice(0, 50)))
+    } catch (_e) {
+      // ignore
+    }
   }
 
   const handleUploadReceipt = () => {
@@ -133,28 +140,26 @@ export default function Lottery() {
       return
     }
 
-    const usedReceipts = JSON.parse(localStorage.getItem('used_receipts') || '[]')
+    const usedReceipts = JSON.parse(localStorage.getItem('used-receipts') || '[]')
     if (usedReceipts.includes(tid)) {
       alert('该交易单号已使用过，请换一个')
       return
     }
     usedReceipts.push(tid)
-    localStorage.setItem('used_receipts', JSON.stringify(usedReceipts))
+    localStorage.setItem('used-receipts', JSON.stringify(usedReceipts))
 
     const drawCountAdded = Math.floor(Math.random() * 3) + 1
-    const current = lotteryStore.drawCount || { totalCount: 0, usedCount: 0, remainingCount: 0 }
-    lotteryStore.setDrawCount({
-      totalCount: current.totalCount + drawCountAdded,
-      usedCount: current.usedCount,
-      remainingCount: current.remainingCount + drawCountAdded,
-    })
+    const newData = {
+      totalCount: drawData.totalCount + drawCountAdded,
+      usedCount: drawData.usedCount,
+      remainingCount: drawData.remainingCount + drawCountAdded,
+    }
+    setDrawData(newData)
+    localStorage.setItem('lottery-counts', JSON.stringify(newData))
 
     alert('验证成功，获得 ' + drawCountAdded + ' 次抽奖机会！')
     setReceiptForm({ transactionId: '', platform: 'wechat' })
   }
-
-  const remainingCount = lotteryStore.drawCount?.remainingCount ?? 0
-  const totalCount = lotteryStore.drawCount?.totalCount ?? 0
 
   return (
     <div style={{ minHeight: '100vh', padding: '96px 16px 32px', backgroundColor: '#f9fafb' }}>
@@ -172,8 +177,8 @@ export default function Lottery() {
             <button
               onClick={() => navigate('/visitor/login')}
               style={BTN_PRIMARY}
-              onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#374151' }}
-              onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#1f2937' }}
+              onMouseOver={(e) => { if (e.currentTarget) e.currentTarget.style.backgroundColor = '#374151' }}
+              onMouseOut={(e) => { if (e.currentTarget) e.currentTarget.style.backgroundColor = '#1f2937' }}
             >
               立即登录
             </button>
@@ -184,13 +189,13 @@ export default function Lottery() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '32px', maxWidth: '672px', marginLeft: 'auto', marginRight: 'auto' }}>
               <div style={{ ...CARD_STYLE, textAlign: 'center' }}>
                 <div style={{ fontSize: '48px', fontWeight: 'bold', color: '#ca8a04', marginBottom: '12px' }}>
-                  {remainingCount}
+                  {drawData.remainingCount}
                 </div>
                 <p style={{ color: '#374151' }}>剩余抽奖次数</p>
               </div>
               <div style={{ ...CARD_STYLE, textAlign: 'center' }}>
                 <div style={{ fontSize: '48px', fontWeight: 'bold', color: '#f97316', marginBottom: '12px' }}>
-                  {totalCount}
+                  {drawData.totalCount}
                 </div>
                 <p style={{ color: '#374151' }}>累计获得次数</p>
               </div>
@@ -201,12 +206,12 @@ export default function Lottery() {
               <h3 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '24px', color: '#111827' }}>立即抽奖</h3>
               <button
                 onClick={handleDraw}
-                style={remainingCount > 0 ? BTN_ACTIVE : BTN_DISABLED}
-                disabled={remainingCount <= 0}
+                style={drawData.remainingCount > 0 ? BTN_ACTIVE : BTN_DISABLED}
+                disabled={drawData.remainingCount <= 0}
               >
                 点击抽奖
               </button>
-              {remainingCount <= 0 && (
+              {drawData.remainingCount <= 0 && (
                 <p style={{ color: '#4b5563', marginTop: '16px', fontSize: '14px' }}>
                   没有抽奖次数？请上传消费凭证获取
                 </p>
@@ -219,7 +224,7 @@ export default function Lottery() {
               <div style={CARD_STYLE}>
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
                   <Upload style={{ width: '24px', height: '24px', color: '#ca8a04', marginRight: '8px' }} />
-                  <h3 style={{ fontSize: '20px', fontWeight: 600, color: '#111827' }}>上传消费凭证</h3>
+                  <h3 style={{ fontSize: '20px', fontWeight: 600, color: '#111827', margin: 0 }}>上传消费凭证</h3>
                 </div>
 
                 <div style={{ marginTop: '16px' }}>
@@ -271,8 +276,8 @@ export default function Lottery() {
                   <button
                     onClick={handleUploadReceipt}
                     style={BTN_PRIMARY}
-                    onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#374151' }}
-                    onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#1f2937' }}
+                    onMouseOver={(e) => { if (e.currentTarget) e.currentTarget.style.backgroundColor = '#374151' }}
+                    onMouseOut={(e) => { if (e.currentTarget) e.currentTarget.style.backgroundColor = '#1f2937' }}
                   >
                     验证并获取次数
                   </button>
@@ -287,7 +292,7 @@ export default function Lottery() {
               <div style={CARD_STYLE}>
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
                   <Scan style={{ width: '24px', height: '24px', color: '#ca8a04', marginRight: '8px' }} />
-                  <h3 style={{ fontSize: '20px', fontWeight: 600, color: '#111827' }}>扫码核销</h3>
+                  <h3 style={{ fontSize: '20px', fontWeight: 600, color: '#111827', margin: 0 }}>扫码核销</h3>
                 </div>
 
                 <p style={{ color: '#374151', marginBottom: '24px' }}>
@@ -297,15 +302,15 @@ export default function Lottery() {
                 <button
                   onClick={() => navigate('/lottery/scan')}
                   style={BTN_PRIMARY}
-                  onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#374151' }}
-                  onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#1f2937' }}
+                  onMouseOver={(e) => { if (e.currentTarget) e.currentTarget.style.backgroundColor = '#374151' }}
+                  onMouseOut={(e) => { if (e.currentTarget) e.currentTarget.style.backgroundColor = '#1f2937' }}
                 >
                   打开扫码
                 </button>
 
                 <div style={{ marginTop: '24px', padding: '16px', backgroundColor: '#f3f4f6', borderRadius: '12px' }}>
                   <p style={{ fontSize: '14px', color: '#374151', marginBottom: '8px' }}>发布要求：</p>
-                  <ul style={{ fontSize: '14px', color: '#4b5563', paddingLeft: '0', listStyle: 'none', lineHeight: '1.8' }}>
+                  <ul style={{ fontSize: '14px', color: '#4b5563', paddingLeft: '0', listStyle: 'none', lineHeight: '1.8', margin: 0 }}>
                     <li>• 小红书/抖音发布内容</li>
                     <li>• 带指定话题 #北魏夜游生活节</li>
                     <li>• 包含现场元素（照片/视频）</li>
@@ -331,16 +336,16 @@ export default function Lottery() {
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
             }}>
               <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎁</div>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', color: result.prize.color || '#ca8a04', marginBottom: '16px' }}>
-                {result.prize.level}
+              <p style={{ fontSize: '24px', fontWeight: 'bold', color: result.color, marginBottom: '16px' }}>
+                {result.level}
               </p>
               <h3 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px', color: '#111827' }}>
-                {result.prize.name}
+                {result.name}
               </h3>
-              <p style={{ color: '#4b5563', marginBottom: '24px' }}>{result.prize.description}</p>
+              <p style={{ color: '#4b5563', marginBottom: '24px' }}>{result.description}</p>
               <div style={{ backgroundColor: '#f3f4f6', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}>
                 <p style={{ fontSize: '14px', color: '#4b5563', marginBottom: '8px' }}>核销码</p>
-                <p style={{ fontSize: '24px', fontFamily: 'monospace', fontWeight: 'bold', color: '#ca8a04' }}>
+                <p style={{ fontSize: '24px', fontFamily: 'monospace', fontWeight: 'bold', color: '#ca8a04', margin: 0 }}>
                   {result.verificationCode}
                 </p>
               </div>
@@ -348,8 +353,8 @@ export default function Lottery() {
               <button
                 onClick={() => { setShowResultModal(false); setResult(null) }}
                 style={BTN_PRIMARY}
-                onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#374151' }}
-                onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#1f2937' }}
+                onMouseOver={(e) => { if (e.currentTarget) e.currentTarget.style.backgroundColor = '#374151' }}
+                onMouseOut={(e) => { if (e.currentTarget) e.currentTarget.style.backgroundColor = '#1f2937' }}
               >
                 确定
               </button>
