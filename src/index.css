@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #1a1a2e;
+  --color-gold: #d4af37;
+  --color-sunset: #ff6b35;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Noto Sans SC', sans-serif;
+  background: linear-gradient(135deg, var(--color-primary) 0%, #0f0f1a 100%);
+  color: #ffffff;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Noto Serif SC', serif;
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-6 py-3 bg-gradient-to-r from-gold to-gold-dark text-primary-dark font-semibold rounded-lg shadow-lg hover:shadow-gold/50 transition-all duration-300 hover:scale-105 active:scale-95;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 border-2 border-gold text-gold font-semibold rounded-lg hover:bg-gold/10 transition-all duration-300;
+  }
+
+  .card {
+    @apply bg-primary-light/50 backdrop-blur-sm rounded-xl border border-gold/20 p-6 transition-all duration-300 hover:border-gold/40 hover:shadow-lg hover:shadow-gold/10;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 bg-primary-light border border-gold/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-all duration-300;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-gold via-sunset to-gold bg-clip-text text-transparent;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+}

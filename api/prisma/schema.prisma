@@ -1,0 +1,211 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  name      String?
+  idCard    String?
+  role      String   @default("visitor")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  merchants         Merchant[]
+  lotteryRecords    LotteryRecord[]
+  receipts          Receipt[]
+  socialInteractions SocialInteraction[]
+  drawCounts        DrawCount[]
+  chatMessages      ChatMessage[]
+
+  @@index([phone])
+  @@index([role])
+}
+
+model Merchant {
+  id               String   @id @default(uuid())
+  userId           String
+  name             String
+  contactPerson    String
+  contactPhone     String
+  idCardImage      String
+  businessLicense  String
+  healthCertificate String?
+  isFoodMerchant   Boolean  @default(false)
+  status           String   @default("pending")
+  rejectReason     String?
+  certificateNumber String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  merchantTags MerchantTag[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Tag {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  type      String
+  createdAt DateTime @default(now())
+
+  merchantTags MerchantTag[]
+
+  @@index([type])
+}
+
+model MerchantTag {
+  id         String   @id @default(uuid())
+  merchantId String
+  tagId      String
+  createdAt  DateTime @default(now())
+
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([merchantId, tagId])
+  @@index([merchantId])
+  @@index([tagId])
+}
+
+model Prize {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  image       String?
+  level       String
+  probability Decimal
+  stock       Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  lotteryRecords LotteryRecord[]
+
+  @@index([level])
+  @@index([isActive])
+}
+
+model LotteryRecord {
+  id                String    @id @default(uuid())
+  userId            String
+  prizeId           String
+  verificationCode   String    @unique
+  isVerified        Boolean   @default(false)
+  verifiedAt        DateTime?
+  verifiedBy        String?
+  createdAt         DateTime  @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prize Prize @relation(fields: [prizeId], references: [id])
+
+  @@index([userId])
+  @@index([prizeId])
+  @@index([verificationCode])
+}
+
+model Receipt {
+  id             String   @id @default(uuid())
+  userId         String
+  transactionId  String   @unique
+  platform       String
+  amount         Decimal?
+  merchantId     String?
+  isMarket       Boolean  @default(false)
+  isPartner      Boolean  @default(false)
+  drawCountAdded Int      @default(1)
+  status         String   @default("pending")
+  createdAt      DateTime @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  merchant Merchant? @relation(fields: [merchantId], references: [id])
+
+  @@index([userId])
+  @@index([transactionId])
+  @@index([status])
+}
+
+model SocialInteraction {
+  id          String   @id @default(uuid())
+  userId      String
+  platform    String
+  profileUrl  String   @unique
+  registeredBy String
+  qrCode      String
+  isUsed      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  staff  User @relation("RegisteredInteractions", fields: [registeredBy], references: [id])
+
+  @@index([userId])
+  @@index([profileUrl])
+}
+
+model DrawCount {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  totalCount  Int      @default(0)
+  usedCount   Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ChatMessage {
+  id      String   @id @default(uuid())
+  userId  String
+  staffId String?
+  content String
+  type    String   @default("text")
+  sender  String
+  isRead  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([staffId])
+}
+
+model ContentConfig {
+  id              String   @id @default(uuid())
+  backgroundType  String   @default("image")
+  backgroundUrl   String?
+  mainTitle       String   @default("四八七十二")
+  subTitle        String   @default("日落后出发：北魏夜游生活节")
+  themeText       String   @default("落日夜游，大有不同")
+  organizer       String   @default("大同市人民政府")
+  undertaker     String   @default("大同市文化旅游投资集团有限公司、大同古城文化旅游发展有限公司")
+  copyright       String   @default("地球明天爆炸")
+  updatedAt       DateTime @updatedAt
+}
+
+model HiddenPrizeConfig {
+  id           String    @id @default(uuid())
+  lastWonAt   DateTime?
+  cooldownDays Int        @default(7)
+  updatedAt    DateTime  @updatedAt
+}
+
+model StaffQrSession {
+  id        String   @id @default(uuid())
+  qrCode    String   @unique
+  staffId   String?
+  isUsed    Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([qrCode])
+  @@index([expiresAt])
+}
