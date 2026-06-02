@@ -21,12 +21,15 @@ api.interceptors.request.use(
   }
 )
 
+let hasRedirected401 = false
+
 api.interceptors.response.use(
   (response) => {
     return response.data
   },
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !hasRedirected401) {
+      hasRedirected401 = true
       localStorage.removeItem('token')
       localStorage.removeItem('role')
       window.location.href = '/'

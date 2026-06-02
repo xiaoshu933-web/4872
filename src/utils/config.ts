@@ -22,7 +22,7 @@ export async function loadConfig(): Promise<Config> {
   let baseConfig: Config = { ...DEFAULT_CONFIG }
 
   try {
-    const response = await fetch('/config.json', { cache: 'no-store' })
+    const response = await fetch('/config.json')
     if (response.ok) {
       const serverConfig = await response.json()
       baseConfig = { ...DEFAULT_CONFIG, ...serverConfig }

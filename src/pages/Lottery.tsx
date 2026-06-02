@@ -83,7 +83,8 @@ export default function Lottery() {
   useEffect(() => {
     hydrateFromLocalStorage()
     window.scrollTo(0, 0)
-  }, [hydrateFromLocalStorage, location.pathname])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname])
 
   // 抽奖奖品（本地定义，不依赖 Prize 类型）
   const prizes = [

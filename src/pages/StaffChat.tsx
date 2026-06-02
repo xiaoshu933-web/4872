@@ -59,8 +59,8 @@ export default function StaffChat() {
 
   useEffect(() => {
     loadVisitors()
-    // 每秒刷新游客列表
-    const timer = setInterval(loadVisitors, 1000)
+    // 每3秒刷新游客列表
+    const timer = setInterval(loadVisitors, 3000)
     return () => clearInterval(timer)
   }, [])
 
@@ -76,12 +76,12 @@ export default function StaffChat() {
     }
   }, [selectedVisitor, refreshKey])
 
-  // 每秒检查消息更新
+  // 每3秒检查消息更新
   useEffect(() => {
     if (selectedVisitor) {
       const timer = setInterval(() => {
         setRefreshKey(k => k + 1)
-      }, 1000)
+      }, 3000)
       return () => clearInterval(timer)
     }
   }, [selectedVisitor])

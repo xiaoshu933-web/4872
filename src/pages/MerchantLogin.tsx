@@ -23,7 +23,8 @@ export default function MerchantLogin() {
         navigate('/merchant')
       }
     }
-  }, [isAuthenticated, navigate, hydrateFromLocalStorage])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, navigate])
 
   useEffect(() => {
     if (countdown > 0) {
