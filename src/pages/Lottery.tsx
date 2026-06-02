@@ -4,6 +4,69 @@ import { Gift, Upload, Scan } from 'lucide-react'
 import { useUserStore } from '@/stores/userStore'
 import { useLotteryStore } from '@/stores/lotteryStore'
 
+const CARD_STYLE = {
+  backgroundColor: '#ffffff',
+  borderRadius: '16px',
+  padding: '24px 32px',
+  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+  border: '1px solid #e5e7eb',
+}
+
+const CARD_STYLE_SM = {
+  backgroundColor: '#ffffff',
+  borderRadius: '16px',
+  padding: '16px 24px',
+  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+  border: '1px solid #e5e7eb',
+}
+
+const INPUT_STYLE = {
+  backgroundColor: '#f3f4f6',
+  border: '1px solid #d1d5db',
+  borderRadius: '8px',
+  padding: '12px 16px',
+  width: '100%',
+  fontSize: '14px',
+  color: '#111827',
+}
+
+const BTN_PRIMARY = {
+  backgroundColor: '#1f2937',
+  color: '#ffffff',
+  padding: '12px 24px',
+  borderRadius: '8px',
+  width: '100%',
+  fontSize: '16px',
+  fontWeight: 600,
+  cursor: 'pointer',
+  border: 'none',
+}
+
+const BTN_DISABLED = {
+  backgroundColor: '#e5e7eb',
+  color: '#9ca3af',
+  padding: '16px 24px',
+  borderRadius: '8px',
+  width: '100%',
+  fontSize: '18px',
+  fontWeight: 'bold',
+  cursor: 'not-allowed',
+  border: 'none',
+}
+
+const BTN_ACTIVE = {
+  background: 'linear-gradient(90deg, #eab308 0%, #f97316 100%)',
+  color: '#ffffff',
+  padding: '16px 24px',
+  borderRadius: '8px',
+  width: '100%',
+  fontSize: '18px',
+  fontWeight: 'bold',
+  cursor: 'pointer',
+  border: 'none',
+  boxShadow: '0 10px 15px -3px rgba(234, 179, 8, 0.3)',
+}
+
 export default function Lottery() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -22,10 +85,10 @@ export default function Lottery() {
   }, [hydrateFromLocalStorage, location.pathname])
 
   const prizes = [
-    { id: 'p1', name: '合作商户优惠券', description: '面值50元合作商户通用优惠券', level: 'participation' },
-    { id: 'p2', name: '北魏文创冰箱贴', description: '精美北魏文化主题冰箱贴一枚', level: 'participation' },
-    { id: 'p3', name: '合作饭店代金券100元', description: '面值100元合作饭店代金券', level: 'second' },
-    { id: 'p4', name: '景区门票一张', description: '大同古城任意景区门票一张', level: 'second' },
+    { id: 'p1', name: '合作商户优惠券', description: '面值50元合作商户通用优惠券', level: '参与奖', color: '#4b5563' },
+    { id: 'p2', name: '北魏文创冰箱贴', description: '精美北魏文化主题冰箱贴一枚', level: '参与奖', color: '#4b5563' },
+    { id: 'p3', name: '合作饭店代金券100元', description: '面值100元合作饭店代金券', level: '二等奖', color: '#2563eb' },
+    { id: 'p4', name: '景区门票一张', description: '大同古城任意景区门票一张', level: '二等奖', color: '#2563eb' },
   ]
 
   const handleDraw = () => {
@@ -41,7 +104,7 @@ export default function Lottery() {
     setResult({ prize: selectedPrize, verificationCode })
     setShowResultModal(true)
 
-    const current = lotteryStore.drawCount!
+    const current = lotteryStore.drawCount || { totalCount: 0, usedCount: 0, remainingCount: 0 }
     lotteryStore.setDrawCount({
       totalCount: current.totalCount,
       usedCount: current.usedCount + 1,
@@ -86,140 +149,114 @@ export default function Lottery() {
       remainingCount: current.remainingCount + drawCountAdded,
     })
 
-    alert(`验证成功，获得 ${drawCountAdded} 次抽奖机会！`)
+    alert('验证成功，获得 ' + drawCountAdded + ' 次抽奖机会！')
     setReceiptForm({ transactionId: '', platform: 'wechat' })
-  }
-
-  const getLevelName = (level: string) => {
-    const names: Record<string, string> = {
-      participation: '参与奖',
-      second: '二等奖',
-      first: '一等奖',
-      hidden: '隐藏大奖',
-    }
-    return names[level] || '参与奖'
-  }
-
-  const getLevelColor = (level: string) => {
-    const colors: Record<string, string> = {
-      participation: 'text-gray-600',
-      second: 'text-blue-600',
-      first: 'text-purple-600',
-      hidden: 'text-yellow-600',
-    }
-    return colors[level] || 'text-gray-600'
   }
 
   const remainingCount = lotteryStore.drawCount?.remainingCount ?? 0
   const totalCount = lotteryStore.drawCount?.totalCount ?? 0
 
   return (
-    <div className="min-h-screen pt-24 pb-8 px-4 bg-gray-50">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8 md:mb-12">
-          <Gift className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-3 md:mb-4 text-gray-800" />
-          <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 mb-3 md:mb-4">游客抽奖</h1>
-          <p className="text-gray-600">消费即可参与抽奖，惊喜好礼等你拿</p>
+    <div style={{ minHeight: '100vh', padding: '96px 16px 32px', backgroundColor: '#f9fafb' }}>
+      <div style={{ maxWidth: '896px', margin: '0 auto' }}>
+        {/* 标题 */}
+        <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+          <Gift style={{ width: '64px', height: '64px', margin: '0 auto 12px', color: '#1f2937' }} />
+          <h1 style={{ fontSize: '30px', fontWeight: 'bold', color: '#111827', marginBottom: '12px', fontFamily: 'serif' }}>游客抽奖</h1>
+          <p style={{ color: '#4b5563', fontSize: '14px' }}>消费即可参与抽奖，惊喜好礼等你拿</p>
         </div>
 
         {!isAuthenticated ? (
-          <div className="max-w-md mx-auto text-center py-10 md:py-12 bg-white rounded-2xl shadow-lg">
-            <p className="text-gray-700 mb-6">登录后即可参与抽奖</p>
+          <div style={{ ...CARD_STYLE, maxWidth: '448px', margin: '0 auto', textAlign: 'center' }}>
+            <p style={{ color: '#374151', marginBottom: '24px' }}>登录后即可参与抽奖</p>
             <button
               onClick={() => navigate('/visitor/login')}
-              className="px-8 py-3 bg-gray-800 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors"
+              style={BTN_PRIMARY}
+              onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#374151' }}
+              onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#1f2937' }}
             >
               立即登录
             </button>
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-2 gap-4 md:gap-8 mb-6 md:mb-12 max-w-2xl mx-auto">
-              <div className="bg-white rounded-2xl p-6 md:p-8 text-center shadow-md">
-                <div className="text-5xl md:text-6xl font-bold text-yellow-600 mb-3 md:mb-4">
+            {/* 抽奖次数卡片 */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '32px', maxWidth: '672px', marginLeft: 'auto', marginRight: 'auto' }}>
+              <div style={{ ...CARD_STYLE, textAlign: 'center' }}>
+                <div style={{ fontSize: '48px', fontWeight: 'bold', color: '#ca8a04', marginBottom: '12px' }}>
                   {remainingCount}
                 </div>
-                <p className="text-gray-700">剩余抽奖次数</p>
+                <p style={{ color: '#374151' }}>剩余抽奖次数</p>
               </div>
-
-              <div className="bg-white rounded-2xl p-6 md:p-8 text-center shadow-md">
-                <div className="text-5xl md:text-6xl font-bold text-orange-500 mb-3 md:mb-4">
+              <div style={{ ...CARD_STYLE, textAlign: 'center' }}>
+                <div style={{ fontSize: '48px', fontWeight: 'bold', color: '#f97316', marginBottom: '12px' }}>
                   {totalCount}
                 </div>
-                <p className="text-gray-700">累计获得次数</p>
+                <p style={{ color: '#374151' }}>累计获得次数</p>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-6 md:p-8 mb-6 md:mb-8 max-w-lg mx-auto shadow-md">
-              <h3 className="text-xl font-semibold mb-6 text-center text-gray-900">立即抽奖</h3>
-
+            {/* 立即抽奖卡片 */}
+            <div style={{ ...CARD_STYLE, marginBottom: '32px', maxWidth: '512px', marginLeft: 'auto', marginRight: 'auto', textAlign: 'center' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '24px', color: '#111827' }}>立即抽奖</h3>
               <button
                 onClick={handleDraw}
+                style={remainingCount > 0 ? BTN_ACTIVE : BTN_DISABLED}
                 disabled={remainingCount <= 0}
-                className={`w-full py-4 rounded-lg font-bold text-lg md:text-xl transition-all ${
-                  remainingCount > 0
-                    ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-lg hover:shadow-xl'
-                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                }`}
               >
                 点击抽奖
               </button>
-
               {remainingCount <= 0 && (
-                <p className="text-center text-sm text-gray-600 mt-4">
+                <p style={{ color: '#4b5563', marginTop: '16px', fontSize: '14px' }}>
                   没有抽奖次数？请上传消费凭证获取
                 </p>
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
-              <div className="bg-white rounded-2xl p-6 md:p-8 shadow-md">
-                <div className="flex items-center mb-4">
-                  <Upload className="w-6 h-6 text-yellow-600 mr-2" />
-                  <h3 className="text-xl font-semibold text-gray-900">上传消费凭证</h3>
+            {/* 下方两个功能区块 */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '32px' }}>
+              {/* 上传消费凭证 */}
+              <div style={CARD_STYLE}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+                  <Upload style={{ width: '24px', height: '24px', color: '#ca8a04', marginRight: '8px' }} />
+                  <h3 style={{ fontSize: '20px', fontWeight: 600, color: '#111827' }}>上传消费凭证</h3>
                 </div>
 
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm text-gray-700 mb-2">支付平台</label>
-                    <div className="flex space-x-4">
-                      <label className="flex items-center text-gray-800">
+                <div style={{ marginTop: '16px' }}>
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '14px', color: '#374151', marginBottom: '8px' }}>支付平台</label>
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', color: '#1f2937' }}>
                         <input
                           type="radio"
                           name="platform"
                           value="wechat"
                           checked={receiptForm.platform === 'wechat'}
-                          onChange={(e) =>
-                            setReceiptForm({ ...receiptForm, platform: 'wechat' })
-                          }
-                          className="mr-2"
+                          onChange={() => setReceiptForm({ ...receiptForm, platform: 'wechat' })}
+                          style={{ marginRight: '8px' }}
                         />
                         <span>微信支付</span>
                       </label>
-                      <label className="flex items-center text-gray-800">
+                      <label style={{ display: 'flex', alignItems: 'center', color: '#1f2937' }}>
                         <input
                           type="radio"
                           name="platform"
                           value="alipay"
                           checked={receiptForm.platform === 'alipay'}
-                          onChange={(e) =>
-                            setReceiptForm({ ...receiptForm, platform: 'alipay' })
-                          }
-                          className="mr-2"
+                          onChange={() => setReceiptForm({ ...receiptForm, platform: 'alipay' })}
+                          style={{ marginRight: '8px' }}
                         />
                         <span>支付宝</span>
                       </label>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm text-gray-700 mb-2">交易单号</label>
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '14px', color: '#374151', marginBottom: '8px' }}>交易单号</label>
                     <input
                       type="text"
                       value={receiptForm.transactionId}
-                      onChange={(e) =>
-                        setReceiptForm({ ...receiptForm, transactionId: e.target.value })
-                      }
+                      onChange={(e) => setReceiptForm({ ...receiptForm, transactionId: e.target.value })}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault()
@@ -227,43 +264,48 @@ export default function Lottery() {
                         }
                       }}
                       placeholder="请输入微信/支付宝交易单号（测试版任意8位数字即可）"
-                      className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:border-yellow-500 text-gray-900 placeholder-gray-400"
+                      style={INPUT_STYLE}
                     />
                   </div>
 
                   <button
                     onClick={handleUploadReceipt}
-                    className="w-full py-3 bg-gray-800 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors"
+                    style={BTN_PRIMARY}
+                    onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#374151' }}
+                    onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#1f2937' }}
                   >
                     验证并获取次数
                   </button>
 
-                  <p className="text-xs text-gray-500 text-center">
+                  <p style={{ fontSize: '12px', color: '#6b7280', textAlign: 'center', marginTop: '16px' }}>
                     每笔有效消费可获得1-3次抽奖机会
                   </p>
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl p-6 md:p-8 shadow-md">
-                <div className="flex items-center mb-4">
-                  <Scan className="w-6 h-6 text-yellow-600 mr-2" />
-                  <h3 className="text-xl font-semibold text-gray-900">扫码核销</h3>
+              {/* 扫码核销 */}
+              <div style={CARD_STYLE}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+                  <Scan style={{ width: '24px', height: '24px', color: '#ca8a04', marginRight: '8px' }} />
+                  <h3 style={{ fontSize: '20px', fontWeight: 600, color: '#111827' }}>扫码核销</h3>
                 </div>
 
-                <p className="text-gray-700 mb-6">
+                <p style={{ color: '#374151', marginBottom: '24px' }}>
                   完成社媒发布后，扫描工作人员提供的二维码获取额外抽奖机会
                 </p>
 
                 <button
                   onClick={() => navigate('/lottery/scan')}
-                  className="w-full py-3 bg-gray-800 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors mb-6"
+                  style={BTN_PRIMARY}
+                  onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#374151' }}
+                  onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#1f2937' }}
                 >
                   打开扫码
                 </button>
 
-                <div className="p-4 bg-gray-100 rounded-xl">
-                  <p className="text-sm text-gray-700 mb-2">发布要求：</p>
-                  <ul className="text-sm text-gray-600 space-y-1">
+                <div style={{ marginTop: '24px', padding: '16px', backgroundColor: '#f3f4f6', borderRadius: '12px' }}>
+                  <p style={{ fontSize: '14px', color: '#374151', marginBottom: '8px' }}>发布要求：</p>
+                  <ul style={{ fontSize: '14px', color: '#4b5563', paddingLeft: '0', listStyle: 'none', lineHeight: '1.8' }}>
                     <li>• 小红书/抖音发布内容</li>
                     <li>• 带指定话题 #北魏夜游生活节</li>
                     <li>• 包含现场元素（照片/视频）</li>
@@ -275,36 +317,39 @@ export default function Lottery() {
           </>
         )}
 
+        {/* 中奖弹窗 */}
         {showResultModal && result && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white rounded-2xl w-full max-w-lg mx-4 p-6 md:p-8 text-center shadow-2xl">
-              <div className="text-6xl mb-4">
-                {result.prize.level === 'hidden' ? '🎉' : '🎁'}
-              </div>
-
-              <p className={`text-3xl font-bold mb-4 ${getLevelColor(result.prize.level)}`}>
-                {getLevelName(result.prize.level)}
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 9999, padding: '16px'
+          }}>
+            <div style={{
+              backgroundColor: '#ffffff', borderRadius: '16px', padding: '32px',
+              maxWidth: '512px', width: '100%', textAlign: 'center',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎁</div>
+              <p style={{ fontSize: '24px', fontWeight: 'bold', color: result.prize.color || '#ca8a04', marginBottom: '16px' }}>
+                {result.prize.level}
               </p>
-
-              <h3 className="text-2xl font-semibold mb-2 text-gray-900">{result.prize.name}</h3>
-
-              <p className="text-gray-600 mb-6">{result.prize.description}</p>
-
-              <div className="bg-gray-100 rounded-xl p-4 mb-6">
-                <p className="text-sm text-gray-600 mb-2">核销码</p>
-                <p className="text-2xl font-mono font-bold text-yellow-600">
+              <h3 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px', color: '#111827' }}>
+                {result.prize.name}
+              </h3>
+              <p style={{ color: '#4b5563', marginBottom: '24px' }}>{result.prize.description}</p>
+              <div style={{ backgroundColor: '#f3f4f6', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}>
+                <p style={{ fontSize: '14px', color: '#4b5563', marginBottom: '8px' }}>核销码</p>
+                <p style={{ fontSize: '24px', fontFamily: 'monospace', fontWeight: 'bold', color: '#ca8a04' }}>
                   {result.verificationCode}
                 </p>
               </div>
-
-              <p className="text-sm text-gray-500 mb-6">请向工作人员出示核销码完成兑奖</p>
-
+              <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '24px' }}>请向工作人员出示核销码完成兑奖</p>
               <button
-                onClick={() => {
-                  setShowResultModal(false)
-                  setResult(null)
-                }}
-                className="px-8 py-3 bg-gray-800 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors"
+                onClick={() => { setShowResultModal(false); setResult(null) }}
+                style={BTN_PRIMARY}
+                onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#374151' }}
+                onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#1f2937' }}
               >
                 确定
               </button>
