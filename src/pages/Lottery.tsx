@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Gift, Upload, Scan, Phone, User, CreditCard } from 'lucide-react'
+import { Gift, Upload, Scan } from 'lucide-react'
 import { useUserStore } from '@/stores/userStore'
 import { useLotteryStore } from '@/stores/lotteryStore'
 import { lotteryService } from '@/services/lottery'
@@ -9,7 +9,6 @@ export default function Lottery() {
   const navigate = useNavigate()
   const { user, isAuthenticated } = useUserStore()
   const { drawCount, setDrawCount, isDrawing, setIsDrawing, addRecord } = useLotteryStore()
-  const [showBindModal, setShowBindModal] = useState(false)
   const [showResultModal, setShowResultModal] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [receiptForm, setReceiptForm] = useState({
@@ -123,10 +122,10 @@ export default function Lottery() {
           <div className="card max-w-md mx-auto text-center py-12">
             <p className="text-gray-400 mb-6">登录后即可参与抽奖</p>
             <button
-              onClick={() => setShowBindModal(true)}
+              onClick={() => navigate('/visitor/login')}
               className="btn-primary"
             >
-              登录参与
+              立即登录
             </button>
           </div>
         ) : (
@@ -265,66 +264,6 @@ export default function Lottery() {
               </div>
             </div>
           </>
-        )}
-
-        {showBindModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-primary-light rounded-xl w-full max-w-md mx-4 p-6">
-              <h3 className="text-2xl font-semibold mb-6 text-center">登录绑定</h3>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">
-                    <Phone className="inline mr-2 w-4 h-4" />
-                    手机号
-                  </label>
-                  <input
-                    type="tel"
-                    placeholder="请输入手机号"
-                    className="input-field"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">
-                    <CreditCard className="inline mr-2 w-4 h-4" />
-                    验证码
-                  </label>
-                  <div className="flex space-x-2">
-                    <input
-                      type="text"
-                      placeholder="请输入验证码"
-                      className="input-field flex-1"
-                    />
-                    <button className="btn-secondary whitespace-nowrap">
-                      获取验证码
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">
-                    <User className="inline mr-2 w-4 h-4" />
-                    姓名（选填）
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="请输入姓名"
-                    className="input-field"
-                  />
-                </div>
-
-                <button className="btn-primary w-full mt-6">确认绑定</button>
-
-                <button
-                  onClick={() => setShowBindModal(false)}
-                  className="w-full text-center text-gray-400 hover:text-white transition-colors"
-                >
-                  取消
-                </button>
-              </div>
-            </div>
-          </div>
         )}
 
         {showResultModal && result && (

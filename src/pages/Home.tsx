@@ -60,8 +60,13 @@ export default function Home() {
             />
           ) : (
             <div
-              className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-1000"
-              style={{ backgroundImage: `url(${currentBg})` }}
+              className="absolute inset-0 bg-cover bg-center bg-fixed transition-opacity duration-1000"
+              style={{ 
+                backgroundImage: `url(${currentBg})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center center',
+                backgroundRepeat: 'no-repeat',
+              }}
             />
           )
         ) : (
@@ -70,9 +75,10 @@ export default function Home() {
 
         <div className="absolute inset-0 bg-black/30" />
 
-        <div className="relative z-10 h-screen flex items-end justify-end">
-          <div className="container mx-auto px-8 pb-16">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-white drop-shadow-lg text-right">
+        <div className="relative z-10 h-screen flex flex-col justify-between">
+          <div className="flex-1" />
+          <div className="container mx-auto px-4 md:px-8 pb-8 md:pb-16">
+            <h1 className="text-3xl md:text-5xl lg:text-7xl font-serif font-bold text-white drop-shadow-lg text-center md:text-right">
               {config.mainTitle}
             </h1>
           </div>
