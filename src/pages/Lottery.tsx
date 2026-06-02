@@ -89,6 +89,7 @@ export default function Lottery() {
         alert(response.message || '验证失败')
       }
     } catch (error) {
+      console.error('上传凭证失败:', error)
       alert('验证失败，请检查交易单号是否正确')
     }
   }
@@ -105,88 +106,87 @@ export default function Lottery() {
 
   const getLevelColor = (level: string) => {
     const colors: Record<string, string> = {
-      participation: 'text-gray-300',
-      second: 'text-blue-300',
-      first: 'text-purple-300',
-      hidden: 'text-yellow-300 animate-glow',
+      participation: 'text-gray-600',
+      second: 'text-blue-600',
+      first: 'text-purple-600',
+      hidden: 'text-yellow-600',
     }
-    return colors[level] || 'text-gray-300'
+    return colors[level] || 'text-gray-600'
   }
 
   return (
-    <div className="min-h-screen py-8 md:py-12 px-4">
+    <div className="min-h-screen py-8 md:py-12 px-4 bg-gray-50">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8 md:mb-12">
-          <Gift className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-3 md:mb-4 text-yellow-400" />
-          <h1 className="text-3xl md:text-4xl font-serif font-bold text-white mb-3 md:mb-4">游客抽奖</h1>
-          <p className="text-gray-300">消费即可参与抽奖，惊喜好礼等你拿</p>
+          <Gift className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-3 md:mb-4 text-gray-800" />
+          <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 mb-3 md:mb-4">游客抽奖</h1>
+          <p className="text-gray-600">消费即可参与抽奖，惊喜好礼等你拿</p>
         </div>
 
         {!isAuthenticated ? (
-          <div className="max-w-md mx-auto text-center py-10 md:py-12 bg-gray-800 bg-opacity-80 rounded-2xl">
-            <p className="text-gray-300 mb-6">登录后即可参与抽奖</p>
+          <div className="max-w-md mx-auto text-center py-10 md:py-12 bg-white rounded-2xl shadow-lg">
+            <p className="text-gray-700 mb-6">登录后即可参与抽奖</p>
             <button
               onClick={() => navigate('/visitor/login')}
-              className="px-8 py-3 bg-yellow-500 text-gray-900 font-semibold rounded-lg hover:bg-yellow-400 transition-colors"
+              className="px-8 py-3 bg-gray-800 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors"
             >
               立即登录
             </button>
           </div>
         ) : (
           <>
-            {/* 移动端上下排列，PC端并排 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-6 md:mb-12">
-              <div className="bg-gray-800 bg-opacity-80 rounded-2xl p-6 md:p-8 text-center">
-                <div className="text-5xl md:text-6xl font-bold text-yellow-400 mb-3 md:mb-4">
+              <div className="bg-white rounded-2xl p-6 md:p-8 text-center shadow-md">
+                <div className="text-5xl md:text-6xl font-bold text-yellow-600 mb-3 md:mb-4">
                   {drawCount?.remainingCount || 0}
                 </div>
-                <p className="text-gray-300">剩余抽奖次数</p>
+                <p className="text-gray-700">剩余抽奖次数</p>
               </div>
 
-              <div className="bg-gray-800 bg-opacity-80 rounded-2xl p-6 md:p-8 text-center">
-                <div className="text-5xl md:text-6xl font-bold text-orange-400 mb-3 md:mb-4">
+              <div className="bg-white rounded-2xl p-6 md:p-8 text-center shadow-md">
+                <div className="text-5xl md:text-6xl font-bold text-orange-500 mb-3 md:mb-4">
                   {drawCount?.totalCount || 0}
                 </div>
-                <p className="text-gray-300">累计获得次数</p>
+                <p className="text-gray-700">累计获得次数</p>
               </div>
             </div>
 
-            <div className="bg-gray-800 bg-opacity-80 rounded-2xl p-6 md:p-8 mb-6 md:mb-8 max-w-lg mx-auto">
-              <h3 className="text-xl font-semibold mb-6 text-center text-white">立即抽奖</h3>
+            <div className="bg-white rounded-2xl p-6 md:p-8 mb-6 md:mb-8 max-w-lg mx-auto shadow-md">
+              <h3 className="text-xl font-semibold mb-6 text-center text-gray-900">立即抽奖</h3>
 
               <button
                 onClick={handleDraw}
                 disabled={!drawCount || drawCount.remainingCount <= 0 || isDrawing}
                 className={`w-full py-4 rounded-lg font-bold text-lg md:text-xl transition-all ${
                   drawCount && drawCount.remainingCount > 0 && !isDrawing
-                    ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-gray-900 hover:scale-105'
-                    : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                    ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:scale-105 shadow-lg'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
               >
                 {isDrawing ? '抽奖中...' : '点击抽奖'}
               </button>
 
               {(!drawCount || drawCount.remainingCount <= 0) && (
-                <p className="text-center text-sm text-gray-300 mt-4">
+                <p className="text-center text-sm text-gray-600 mt-4">
                   没有抽奖次数？请上传消费凭证获取
                 </p>
               )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
-              <div className="bg-gray-800 bg-opacity-80 rounded-2xl p-6 md:p-8">
+              <div className="bg-white rounded-2xl p-6 md:p-8 shadow-md">
                 <div className="flex items-center mb-4">
-                  <Upload className="w-6 h-6 text-yellow-400 mr-2" />
-                  <h3 className="text-xl font-semibold text-white">上传消费凭证</h3>
+                  <Upload className="w-6 h-6 text-yellow-600 mr-2" />
+                  <h3 className="text-xl font-semibold text-gray-900">上传消费凭证</h3>
                 </div>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm text-gray-300 mb-2">
+                    <label className="block text-sm text-gray-700 mb-2">
                       支付平台
                     </label>
                     <div className="flex space-x-4">
-                      <label className="flex items-center text-gray-200">
+                      <label className="flex items-center text-gray-800">
                         <input
                           type="radio"
                           name="platform"
@@ -199,7 +199,7 @@ export default function Lottery() {
                         />
                         <span>微信支付</span>
                       </label>
-                      <label className="flex items-center text-gray-200">
+                      <label className="flex items-center text-gray-800">
                         <input
                           type="radio"
                           name="platform"
@@ -216,7 +216,7 @@ export default function Lottery() {
                   </div>
 
                   <div>
-                    <label className="block text-sm text-gray-300 mb-2">
+                    <label className="block text-sm text-gray-700 mb-2">
                       交易单号
                     </label>
                     <input
@@ -226,43 +226,43 @@ export default function Lottery() {
                         setReceiptForm({ ...receiptForm, transactionId: e.target.value })
                       }
                       placeholder="请输入微信/支付宝交易单号"
-                      className="w-full px-4 py-3 bg-gray-700 bg-opacity-80 border border-gray-600 rounded-lg focus:outline-none focus:border-yellow-500 text-white placeholder-gray-400"
+                      className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:border-yellow-500 text-gray-900 placeholder-gray-400"
                     />
                   </div>
 
                   <button
                     onClick={handleUploadReceipt}
-                    className="w-full py-3 bg-yellow-500 text-gray-900 font-semibold rounded-lg hover:bg-yellow-400 transition-colors"
+                    className="w-full py-3 bg-gray-800 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors"
                   >
                     验证并获取次数
                   </button>
 
-                  <p className="text-xs text-gray-400 text-center">
+                  <p className="text-xs text-gray-500 text-center">
                     每笔有效消费可获得1-3次抽奖机会，取决于消费地点
                   </p>
                 </div>
               </div>
 
-              <div className="bg-gray-800 bg-opacity-80 rounded-2xl p-6 md:p-8">
+              <div className="bg-white rounded-2xl p-6 md:p-8 shadow-md">
                 <div className="flex items-center mb-4">
-                  <Scan className="w-6 h-6 text-yellow-400 mr-2" />
-                  <h3 className="text-xl font-semibold text-white">扫码核销</h3>
+                  <Scan className="w-6 h-6 text-yellow-600 mr-2" />
+                  <h3 className="text-xl font-semibold text-gray-900">扫码核销</h3>
                 </div>
 
-                <p className="text-gray-300 mb-6">
+                <p className="text-gray-700 mb-6">
                   完成社媒发布后，扫描工作人员提供的二维码获取额外抽奖机会
                 </p>
 
                 <button
                   onClick={() => navigate('/lottery/scan')}
-                  className="w-full py-3 bg-yellow-500 text-gray-900 font-semibold rounded-lg hover:bg-yellow-400 transition-colors mb-6"
+                  className="w-full py-3 bg-gray-800 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors mb-6"
                 >
                   打开扫码
                 </button>
 
-                <div className="p-4 bg-gray-700 bg-opacity-60 rounded-xl">
-                  <p className="text-sm text-gray-300 mb-2">发布要求：</p>
-                  <ul className="text-sm text-gray-400 space-y-1">
+                <div className="p-4 bg-gray-100 rounded-xl">
+                  <p className="text-sm text-gray-700 mb-2">发布要求：</p>
+                  <ul className="text-sm text-gray-600 space-y-1">
                     <li>• 小红书/抖音发布内容</li>
                     <li>• 带指定话题 #北魏夜游生活节</li>
                     <li>• 包含现场元素（照片/视频）</li>
@@ -275,8 +275,8 @@ export default function Lottery() {
         )}
 
         {showResultModal && result && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
-            <div className="bg-gray-800 rounded-2xl w-full max-w-lg mx-4 p-6 md:p-8 text-center animate-slide-up">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white rounded-2xl w-full max-w-lg mx-4 p-6 md:p-8 text-center shadow-xl">
               <div className="text-6xl mb-4">
                 {result.prize.level === 'hidden' ? '🎉' : '🎁'}
               </div>
@@ -285,18 +285,18 @@ export default function Lottery() {
                 {getLevelName(result.prize.level)}
               </p>
 
-              <h3 className="text-2xl font-semibold mb-2 text-white">{result.prize.name}</h3>
+              <h3 className="text-2xl font-semibold mb-2 text-gray-900">{result.prize.name}</h3>
 
-              <p className="text-gray-300 mb-6">{result.prize.description}</p>
+              <p className="text-gray-600 mb-6">{result.prize.description}</p>
 
-              <div className="bg-gray-700 bg-opacity-60 rounded-xl p-4 mb-6">
-                <p className="text-sm text-gray-300 mb-2">核销码</p>
-                <p className="text-2xl font-mono font-bold text-yellow-400">
+              <div className="bg-gray-100 rounded-xl p-4 mb-6">
+                <p className="text-sm text-gray-600 mb-2">核销码</p>
+                <p className="text-2xl font-mono font-bold text-yellow-600">
                   {result.verificationCode}
                 </p>
               </div>
 
-              <p className="text-sm text-gray-400 mb-6">
+              <p className="text-sm text-gray-500 mb-6">
                 请向工作人员出示核销码完成兑奖
               </p>
 
@@ -305,7 +305,7 @@ export default function Lottery() {
                   setShowResultModal(false)
                   setResult(null)
                 }}
-                className="px-8 py-3 bg-yellow-500 text-gray-900 font-semibold rounded-lg hover:bg-yellow-400 transition-colors"
+                className="px-8 py-3 bg-gray-800 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors"
               >
                 确定
               </button>
