@@ -60,12 +60,14 @@ export default function Home() {
             />
           ) : (
             <div
-              className="absolute inset-0 bg-cover bg-center bg-fixed transition-opacity duration-1000"
+              className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000"
               style={{ 
                 backgroundImage: `url(${currentBg})`,
                 backgroundSize: 'cover',
-                backgroundPosition: 'center center',
+                backgroundPosition: '50% 50%',
                 backgroundRepeat: 'no-repeat',
+                minHeight: '100vh',
+                width: '100%',
               }}
             />
           )
@@ -75,9 +77,8 @@ export default function Home() {
 
         <div className="absolute inset-0 bg-black/30" />
 
-        <div className="relative z-10 h-screen flex flex-col justify-between">
-          <div className="flex-1" />
-          <div className="container mx-auto px-4 md:px-8 pb-8 md:pb-16">
+        <div className="relative z-10 min-h-screen flex flex-col justify-end pb-8 md:pb-16">
+          <div className="container mx-auto px-4 md:px-8">
             <h1 className="text-3xl md:text-5xl lg:text-7xl font-serif font-bold text-white drop-shadow-lg text-center md:text-right">
               {config.mainTitle}
             </h1>
@@ -101,14 +102,14 @@ export default function Home() {
         )}
       </section>
 
-      <section className="py-20 px-4 bg-gray-50">
+      <section className="py-16 px-4 bg-gray-50">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl font-serif text-center mb-4 text-gray-800">
             活动信息
           </h2>
-          <div className="w-20 h-1 bg-gray-300 mx-auto mb-12"></div>
+          <div className="w-20 h-1 bg-gray-300 mx-auto mb-10"></div>
 
-          <div className="grid md:grid-cols-2 gap-10">
+          <div className="grid md:grid-cols-2 gap-8">
             <div className="text-center">
               <p className="text-lg font-medium text-gray-800 mb-3">📍 活动地点</p>
               <div className="space-y-1">
@@ -129,21 +130,9 @@ export default function Home() {
                   ))}
               </div>
             </div>
-
-            <div className="text-center md:col-span-2 mt-6">
-              <p className="text-lg font-medium text-gray-800 mb-4">🏛️ 组织单位</p>
-              <div className="space-y-3 text-center">
-                <p className="text-gray-700 font-medium text-lg">
-                  主办单位：{config.organizer}
-                </p>
-                <p className="text-gray-600">
-                  承办单位：{config.undertaker}
-                </p>
-              </div>
-            </div>
           </div>
 
-          <div className="mt-12 text-center space-y-4">
+          <div className="mt-10 text-center space-y-4">
             <Link
               to="/visitor/login"
               className="inline-block bg-gray-800 text-white px-10 py-4 rounded-lg hover:bg-gray-700 transition-colors font-medium text-lg"

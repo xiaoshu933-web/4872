@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -38,44 +38,8 @@ export default function StaffChat() {
   const [messages, setMessages] = useState<Message[]>([])
   const [inputMessage, setInputMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
-  const [visitors, setVisitors] = useState<Visitor[]>([
-    {
-      id: '1',
-      name: '游客A',
-      phone: '138****1234',
-      avatar: 'A',
-      lastMessage: '您好，请问抽奖怎么参与？',
-      lastTime: '刚刚',
-      unread: 2,
-    },
-    {
-      id: '2',
-      name: '游客B',
-      phone: '139****5678',
-      avatar: 'B',
-      lastMessage: '奖品什么时候可以领取？',
-      lastTime: '5分钟前',
-      unread: 0,
-    },
-    {
-      id: '3',
-      name: '商户C',
-      phone: '137****9012',
-      avatar: 'C',
-      lastMessage: '我的申请审核结果出来了吗？',
-      lastTime: '30分钟前',
-      unread: 1,
-    },
-    {
-      id: '4',
-      name: '游客D',
-      phone: '136****3456',
-      avatar: 'D',
-      lastMessage: '消费凭证怎么上传？',
-      lastTime: '1小时前',
-      unread: 0,
-    },
-  ])
+  const [visitors, setVisitors] = useState<Visitor[]>([])
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const menuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: '数据看板', path: '/staff/dashboard' },
@@ -84,46 +48,80 @@ export default function StaffChat() {
   ]
 
   useEffect(() => {
+    const loadVisitors = () => {
+      const savedVisitors = localStorage.getItem('staff_visitors')
+      if (savedVisitors) {
+        const parsedVisitors = JSON.parse(savedVisitors)
+        setVisitors(parsedVisitors)
+      } else {
+        const defaultVisitors: Visitor[] = [
+          {
+            id: 'visitor_13800138001',
+            name: '游客0001',
+            phone: '138****0001',
+            avatar: '1',
+            lastMessage: '您好，请问抽奖怎么参与？',
+            lastTime: '刚刚',
+            unread: 1,
+          },
+          {
+            id: 'visitor_13800138002',
+            name: '游客0002',
+            phone: '139****0002',
+            avatar: '2',
+            lastMessage: '奖品什么时候可以领取？',
+            lastTime: '5分钟前',
+            unread: 0,
+          },
+        ]
+        setVisitors(defaultVisitors)
+        localStorage.setItem('staff_visitors', JSON.stringify(defaultVisitors))
+      }
+    }
+
+    loadVisitors()
+    const timer = setInterval(loadVisitors, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
     if (selectedVisitor) {
-      setMessages([
-        {
-          id: '1',
-          sender: 'visitor',
-          content: '您好，请问抽奖怎么参与？',
-          timestamp: '10:00',
-          type: 'text',
-        },
-        {
-          id: '2',
-          sender: 'staff',
-          content: '您好！参与抽奖需要先登录账号，然后上传古城内的消费凭证获取抽奖次数。',
-          timestamp: '10:01',
-          type: 'text',
-        },
-        {
-          id: '3',
-          sender: 'visitor',
-          content: '消费凭证是什么？',
-          timestamp: '10:02',
-          type: 'text',
-        },
-        {
-          id: '4',
-          sender: 'staff',
-          content: '消费凭证就是您在大同古城内消费的微信或支付宝交易单号。',
-          timestamp: '10:03',
-          type: 'text',
-        },
-        {
-          id: '5',
-          sender: 'visitor',
-          content: '好的，明白了，谢谢！',
-          timestamp: '10:05',
-          type: 'text',
-        },
-      ])
+      const loadMessages = () => {
+        const savedMessages = localStorage.getItem(`chat_messages_${selectedVisitor.id}`)
+        if (savedMessages) {
+          const parsedMessages = JSON.parse(savedMessages)
+          setMessages(parsedMessages)
+        } else {
+          const defaultMessages: Message[] = [
+            {
+              id: '1',
+              sender: 'visitor',
+              content: '您好，请问抽奖怎么参与？',
+              timestamp: '10:00',
+              type: 'text',
+            },
+            {
+              id: '2',
+              sender: 'staff',
+              content: '您好！参与抽奖需要先登录账号，然后上传古城内的消费凭证获取抽奖次数。',
+              timestamp: '10:01',
+              type: 'text',
+            },
+          ]
+          setMessages(defaultMessages)
+          localStorage.setItem(`chat_messages_${selectedVisitor.id}`, JSON.stringify(defaultMessages))
+        }
+      }
+
+      loadMessages()
+      const timer = setInterval(loadMessages, 1000)
+      return () => clearInterval(timer)
     }
   }, [selectedVisitor])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   useEffect(() => {
     if (isTyping) {
@@ -145,7 +143,7 @@ export default function StaffChat() {
   }, [isTyping, messages])
 
   const handleSend = () => {
-    if (!inputMessage.trim()) return
+    if (!inputMessage.trim() || !selectedVisitor) return
 
     const newMessage: Message = {
       id: Date.now().toString(),
@@ -155,10 +153,38 @@ export default function StaffChat() {
       type: 'text',
     }
 
-    setMessages([...messages, newMessage])
+    const updatedMessages = [...messages, newMessage]
+    setMessages(updatedMessages)
     setInputMessage('')
+    localStorage.setItem(`chat_messages_${selectedVisitor.id}`, JSON.stringify(updatedMessages))
+
+    const savedVisitors = localStorage.getItem('staff_visitors')
+    if (savedVisitors) {
+      const visitorsList = JSON.parse(savedVisitors)
+      const updatedVisitors = visitorsList.map((v: Visitor) =>
+        v.id === selectedVisitor.id
+          ? { ...v, lastMessage: inputMessage, lastTime: '刚刚' }
+          : v
+      )
+      localStorage.setItem('staff_visitors', JSON.stringify(updatedVisitors))
+      setVisitors(updatedVisitors)
+    }
 
     setIsTyping(true)
+  }
+
+  const handleSelectVisitor = (visitor: Visitor) => {
+    setSelectedVisitor(visitor)
+    const savedVisitors = localStorage.getItem('staff_visitors')
+    if (savedVisitors) {
+      const visitorsList = JSON.parse(savedVisitors)
+      const updatedVisitors = visitorsList.map((v: Visitor) =>
+        v.id === visitor.id ? { ...v, unread: 0 } : v
+      )
+      localStorage.setItem('staff_visitors', JSON.stringify(updatedVisitors))
+      setVisitors(updatedVisitors)
+    }
+    localStorage.removeItem(`staff_unread_${visitor.id}`)
   }
 
   const handleLogout = () => {
@@ -226,12 +252,7 @@ export default function StaffChat() {
               {visitors.map((visitor) => (
                 <button
                   key={visitor.id}
-                  onClick={() => {
-                    setSelectedVisitor(visitor)
-                    setVisitors(visitors.map(v => 
-                      v.id === visitor.id ? { ...v, unread: 0 } : v
-                    ))
-                  }}
+                  onClick={() => handleSelectVisitor(visitor)}
                   className={`w-full p-4 text-left hover:bg-gray-50 transition-colors flex items-center space-x-3 ${
                     selectedVisitor?.id === visitor.id ? 'bg-blue-50' : ''
                   }`}
@@ -315,6 +336,7 @@ export default function StaffChat() {
                       </div>
                     </div>
                   )}
+                  <div ref={messagesEndRef} />
                 </div>
 
                 <div className="p-4 border-t border-gray-200">

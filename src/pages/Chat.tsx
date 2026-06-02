@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Send, Image, Home as HomeIcon, LogOut, X, User } from 'lucide-react'
 
@@ -7,6 +7,7 @@ interface Message {
   sender: 'visitor' | 'staff'
   content: string
   timestamp: string
+  visitorId: string
 }
 
 export default function Chat() {
@@ -15,17 +16,47 @@ export default function Chat() {
   const [inputMessage, setInputMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [isStaffOnline, setIsStaffOnline] = useState(true)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  const visitorId = localStorage.getItem('visitorPhone') || 'unknown'
+  const visitorKey = `visitor_${visitorId}`
 
   useEffect(() => {
-    setMessages([
-      {
-        id: '1',
-        sender: 'staff',
-        content: '您好！欢迎咨询"四八七十二·北魏夜游生活节"活动，有什么可以帮助您的？',
-        timestamp: '10:00',
-      },
-    ])
-  }, [])
+    const savedMessages = localStorage.getItem(`chat_messages_${visitorKey}`)
+    if (savedMessages) {
+      setMessages(JSON.parse(savedMessages))
+    } else {
+      const initialMessages: Message[] = [
+        {
+          id: '1',
+          sender: 'staff',
+          content: '您好！欢迎咨询"四八七十二·北魏夜游生活节"活动，有什么可以帮助您的？',
+          timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+          visitorId: visitorKey,
+        },
+      ]
+      setMessages(initialMessages)
+      localStorage.setItem(`chat_messages_${visitorKey}`, JSON.stringify(initialMessages))
+    }
+  }, [visitorKey])
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const savedMessages = localStorage.getItem(`chat_messages_${visitorKey}`)
+      if (savedMessages) {
+        const parsedMessages = JSON.parse(savedMessages)
+        if (parsedMessages.length !== messages.length) {
+          setMessages(parsedMessages)
+        }
+      }
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [visitorKey, messages.length])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   useEffect(() => {
     if (isTyping) {
@@ -38,19 +69,21 @@ export default function Chat() {
           '明白了，我来帮您解答这个问题。',
         ]
         const reply = replies[Math.floor(Math.random() * replies.length)]
-        setMessages([
-          ...messages,
-          {
-            id: Date.now().toString(),
-            sender: 'staff',
-            content: reply,
-            timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-          },
-        ])
+        const newMessage: Message = {
+          id: Date.now().toString(),
+          sender: 'staff',
+          content: reply,
+          timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+          visitorId: visitorKey,
+        }
+        const updatedMessages = [...messages, newMessage]
+        setMessages(updatedMessages)
+        localStorage.setItem(`chat_messages_${visitorKey}`, JSON.stringify(updatedMessages))
+        localStorage.setItem(`staff_unread_${visitorKey}`, '1')
       }, 2000)
       return () => clearTimeout(timer)
     }
-  }, [isTyping, messages])
+  }, [isTyping, messages, visitorKey])
 
   const handleSend = () => {
     if (!inputMessage.trim()) return
@@ -60,10 +93,37 @@ export default function Chat() {
       sender: 'visitor',
       content: inputMessage,
       timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+      visitorId: visitorKey,
     }
 
-    setMessages([...messages, newMessage])
+    const updatedMessages = [...messages, newMessage]
+    setMessages(updatedMessages)
     setInputMessage('')
+    localStorage.setItem(`chat_messages_${visitorKey}`, JSON.stringify(updatedMessages))
+    localStorage.setItem(`staff_unread_${visitorKey}`, '1')
+    
+    const staffVisitors = localStorage.getItem('staff_visitors')
+    const visitorsList = staffVisitors ? JSON.parse(staffVisitors) : []
+    if (!visitorsList.find((v: any) => v.id === visitorKey)) {
+      visitorsList.push({
+        id: visitorKey,
+        name: `游客${visitorId.slice(-4)}`,
+        phone: visitorId,
+        avatar: visitorId.slice(-1).toUpperCase(),
+        lastMessage: inputMessage,
+        lastTime: '刚刚',
+        unread: 1,
+      })
+      localStorage.setItem('staff_visitors', JSON.stringify(visitorsList))
+    } else {
+      const updatedVisitors = visitorsList.map((v: any) =>
+        v.id === visitorKey
+          ? { ...v, lastMessage: inputMessage, lastTime: '刚刚', unread: (v.unread || 0) + 1 }
+          : v
+      )
+      localStorage.setItem('staff_visitors', JSON.stringify(updatedVisitors))
+    }
+    
     setIsTyping(true)
   }
 
@@ -159,6 +219,7 @@ export default function Chat() {
                 </div>
               </div>
             )}
+            <div ref={messagesEndRef} />
           </div>
 
           <div className="p-4 border-t border-gray-200">
