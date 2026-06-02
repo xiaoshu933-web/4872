@@ -16,7 +16,9 @@ import {
   Save,
   X,
   Palette,
+  Download,
 } from 'lucide-react'
+import { loadConfig, saveConfig, downloadConfigFile, DEFAULT_CONFIG } from '@/utils/config'
 
 interface Prize {
   id: string
@@ -28,66 +30,23 @@ interface Prize {
   status: 'active' | 'inactive'
 }
 
-const DEFAULT_CONFIG = {
-  mainTitle: '日落后出发',
-  activityTime: '夏季：6月15日至9月15日\n冬季：12月1日至次年3月10日',
-  organizer: '大同市人民政府',
-  undertaker: '大同市文化旅游投资集团有限公司、大同古城文化旅游发展有限公司',
-  locationLine1: '大同市平城区',
-  locationLine2: '大同古城',
-  copyright: '地球明天爆炸',
-  background1: '',
-  background2: '',
-  background3: '',
-}
-
-const CONFIG_KEY = 'night_festival_config'
-
-function loadConfigFromStorage() {
-  try {
-    const saved = localStorage.getItem(CONFIG_KEY)
-    if (saved) {
-      return { ...DEFAULT_CONFIG, ...JSON.parse(saved) }
-    }
-  } catch (e) {
-    console.error('加载配置失败:', e)
-  }
-  try {
-    const bg1 = localStorage.getItem('admin_background_1') || ''
-    const bg2 = localStorage.getItem('admin_background_2') || ''
-    const bg3 = localStorage.getItem('admin_background_3') || ''
-    const content = localStorage.getItem('admin_content')
-    if (content) {
-      try {
-        const parsedContent = JSON.parse(content)
-        return { ...DEFAULT_CONFIG, ...parsedContent, background1: bg1, background2: bg2, background3: bg3 }
-      } catch {}
-    }
-    return { ...DEFAULT_CONFIG, background1: bg1, background2: bg2, background3: bg3 }
-  } catch {
-    return DEFAULT_CONFIG
-  }
-  return DEFAULT_CONFIG
-}
-
-function saveConfigToStorage(config: typeof DEFAULT_CONFIG) {
-  try {
-    localStorage.setItem(CONFIG_KEY, JSON.stringify(config))
-    return true
-  } catch (e) {
-    console.error('保存配置失败:', e)
-    alert('保存失败：图片可能太大，请使用较小的图片或使用图片URL')
-    return false
-  }
-}
-
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('content')
   const [config, setConfig] = useState(DEFAULT_CONFIG)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    setConfig(loadConfigFromStorage())
+    let mounted = true
+    loadConfig().then((cfg) => {
+      if (mounted) {
+        setConfig(cfg)
+        setLoading(false)
+      }
+    })
+    return () => {
+      mounted = false
+    }
   }, [])
 
   const [prizes, setPrizes] = useState<Prize[]>([
@@ -124,7 +83,7 @@ export default function AdminDashboard() {
       const bgKey = `background${index}` as keyof typeof DEFAULT_CONFIG
       const newConfig = { ...config, [bgKey]: url }
       setConfig(newConfig)
-      saveConfigToStorage(newConfig)
+      saveConfig(newConfig)
     }
     reader.readAsDataURL(file)
   }
@@ -133,20 +92,24 @@ export default function AdminDashboard() {
     const bgKey = `background${index}` as keyof typeof DEFAULT_CONFIG
     const newConfig = { ...config, [bgKey]: url }
     setConfig(newConfig)
-    saveConfigToStorage(newConfig)
+    saveConfig(newConfig)
   }
 
   const clearBackground = (index: number) => {
     const bgKey = `background${index}` as keyof typeof DEFAULT_CONFIG
     const newConfig = { ...config, [bgKey]: '' }
     setConfig(newConfig)
-    saveConfigToStorage(newConfig)
+    saveConfig(newConfig)
   }
 
   const handleSaveContent = () => {
-    if (saveConfigToStorage(config)) {
-      alert('保存成功！请刷新首页查看效果')
-    }
+    saveConfig(config)
+    alert('保存成功！请刷新首页查看效果')
+  }
+
+  const handleExportConfig = () => {
+    downloadConfigFile(config)
+    alert('配置文件已导出！请将下载的 config.json 替换项目中的 public/config.json，然后重新部署即可。')
   }
 
   const handleLogout = () => {
@@ -247,6 +210,14 @@ export default function AdminDashboard() {
     return map[level] || 'bg-gray-100 text-gray-700'
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-gray-600 text-lg">加载中...</div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 shadow-sm">
@@ -300,6 +271,19 @@ export default function AdminDashboard() {
         </aside>
 
         <main className="flex-1">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
+            <h4 className="font-semibold text-yellow-800 mb-2 flex items-center">
+              <Palette className="w-4 h-4 mr-2" />
+              部署说明（重要）
+            </h4>
+            <p className="text-sm text-yellow-800 leading-relaxed">
+              修改内容/背景后，点击"保存配置"只会保存到当前浏览器，便于预览。
+              若要让所有访客都看到最新配置，请点击下方按钮<strong>导出配置文件</strong>，
+              将下载的 <code className="bg-yellow-200 px-1 rounded">config.json</code> 替换项目中的
+              <code className="bg-yellow-200 px-1 rounded">public/config.json</code>，然后重新部署。
+            </p>
+          </div>
+
           {activeTab === 'content' && (
             <div className="max-w-4xl">
               <div className="mb-8">
@@ -426,12 +410,21 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <button
-                onClick={handleSaveContent}
-                className="w-full bg-gray-800 text-white py-4 rounded-lg hover:bg-gray-700 transition-colors font-medium text-lg"
-              >
-                保存配置
-              </button>
+              <div className="flex space-x-4">
+                <button
+                  onClick={handleSaveContent}
+                  className="flex-1 bg-gray-800 text-white py-4 rounded-lg hover:bg-gray-700 transition-colors font-medium text-lg"
+                >
+                  保存配置
+                </button>
+                <button
+                  onClick={handleExportConfig}
+                  className="flex-1 bg-blue-600 text-white py-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-lg flex items-center justify-center"
+                >
+                  <Download className="w-5 h-5 mr-2" />
+                  导出配置文件
+                </button>
+              </div>
             </div>
           )}
 
@@ -567,12 +560,21 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <button
-                onClick={handleSaveContent}
-                className="w-full bg-gray-800 text-white py-4 rounded-lg hover:bg-gray-700 transition-colors font-medium text-lg"
-              >
-                保存配置
-              </button>
+              <div className="flex space-x-4">
+                <button
+                  onClick={handleSaveContent}
+                  className="flex-1 bg-gray-800 text-white py-4 rounded-lg hover:bg-gray-700 transition-colors font-medium text-lg"
+                >
+                  保存配置
+                </button>
+                <button
+                  onClick={handleExportConfig}
+                  className="flex-1 bg-blue-600 text-white py-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-lg flex items-center justify-center"
+                >
+                  <Download className="w-5 h-5 mr-2" />
+                  导出配置文件
+                </button>
+              </div>
             </div>
           )}
 

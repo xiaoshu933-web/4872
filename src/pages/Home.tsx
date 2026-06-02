@@ -1,59 +1,23 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-
-const DEFAULT_CONFIG = {
-  mainTitle: '日落后出发',
-  activityTime: '夏季：6月15日至9月15日\n冬季：12月1日至次年3月10日',
-  organizer: '大同市人民政府',
-  undertaker: '大同市文化旅游投资集团有限公司、大同古城文化旅游发展有限公司',
-  locationLine1: '大同市平城区',
-  locationLine2: '大同古城',
-  copyright: '地球明天爆炸',
-  background1: '',
-  background2: '',
-  background3: '',
-}
-
-function loadConfig() {
-  try {
-    const saved = localStorage.getItem('night_festival_config')
-    if (saved) {
-      const parsed = JSON.parse(saved)
-      return { ...DEFAULT_CONFIG, ...parsed }
-    }
-  } catch (e) {
-    console.error('加载配置失败:', e)
-  }
-  try {
-      const bg1 = localStorage.getItem('admin_background_1') || ''
-      const bg2 = localStorage.getItem('admin_background_2') || ''
-      const bg3 = localStorage.getItem('admin_background_3') || ''
-      const content = localStorage.getItem('admin_content')
-      if (content) {
-        try {
-          const parsedContent = JSON.parse(content)
-          return {
-            ...DEFAULT_CONFIG,
-            ...parsedContent,
-            background1: bg1,
-            background2: bg2,
-            background3: bg3,
-          }
-        } catch {}
-      }
-      return { ...DEFAULT_CONFIG, background1: bg1, background2: bg2, background3: bg3 }
-    } catch {
-      return DEFAULT_CONFIG
-    }
-  return DEFAULT_CONFIG
-}
+import { loadConfig, DEFAULT_CONFIG } from '@/utils/config'
 
 export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [config, setConfig] = useState(DEFAULT_CONFIG)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    setConfig(loadConfig())
+    let mounted = true
+    loadConfig().then((cfg) => {
+      if (mounted) {
+        setConfig(cfg)
+        setLoading(false)
+      }
+    })
+    return () => {
+      mounted = false
+    }
   }, [])
 
   const backgrounds = [config.background1, config.background2, config.background3].filter(
@@ -67,14 +31,23 @@ export default function Home() {
   const validBackgrounds = backgrounds.filter(isValidBackground)
 
   useEffect(() => {
+    if (validBackgrounds.length <= 1) return
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % validBackgrounds.length || 0)
+      setCurrentSlide((prev) => (prev + 1) % validBackgrounds.length)
     }, 5000)
     return () => clearInterval(timer)
   }, [validBackgrounds.length])
 
   const currentBg = validBackgrounds[currentSlide] || ''
   const isColorBackground = currentBg.startsWith('#')
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="text-white text-lg">加载中...</div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen">

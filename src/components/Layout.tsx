@@ -1,23 +1,7 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { MessageCircle, Gift, Store, User, ChevronDown, Users, LogOut, Shield, Send as SendIcon } from 'lucide-react'
-
-const DEFAULT_CONFIG = {
-  copyright: '地球明天爆炸',
-}
-
-function loadConfig() {
-  try {
-    const saved = localStorage.getItem('night_festival_config')
-    if (saved) {
-      const parsed = JSON.parse(saved)
-      return { ...DEFAULT_CONFIG, ...parsed }
-    }
-  } catch (e) {
-    console.error('加载配置失败:', e)
-  }
-  return DEFAULT_CONFIG
-}
+import { loadConfig, DEFAULT_CONFIG } from '@/utils/config'
 
 interface ChatMessage {
   id: string
@@ -84,7 +68,13 @@ export default function Layout() {
   useEffect(() => {
     const role = localStorage.getItem('role')
     setUserRole(role)
-    setConfig(loadConfig())
+    let mounted = true
+    loadConfig().then((cfg) => {
+      if (mounted) setConfig(cfg)
+    })
+    return () => {
+      mounted = false
+    }
   }, [])
 
   const handleLogout = () => {
