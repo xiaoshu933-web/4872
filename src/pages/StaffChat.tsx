@@ -11,6 +11,7 @@ import {
   MoreVertical,
   Phone,
   User,
+  RefreshCw,
 } from 'lucide-react'
 
 interface Message {
@@ -18,7 +19,7 @@ interface Message {
   sender: 'visitor' | 'staff'
   content: string
   timestamp: string
-  type: 'text' | 'image'
+  visitorId: string
 }
 
 interface Visitor {
@@ -37,9 +38,9 @@ export default function StaffChat() {
   const [selectedVisitor, setSelectedVisitor] = useState<Visitor | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [inputMessage, setInputMessage] = useState('')
-  const [isTyping, setIsTyping] = useState(false)
   const [visitors, setVisitors] = useState<Visitor[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   const menuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: '数据看板', path: '/staff/dashboard' },
@@ -47,74 +48,40 @@ export default function StaffChat() {
     { id: 'chat', icon: MessageCircle, label: '客服后台', path: '/staff/chat' },
   ]
 
-  useEffect(() => {
-    const loadVisitors = () => {
-      const savedVisitors = localStorage.getItem('staff_visitors')
-      if (savedVisitors) {
-        const parsedVisitors = JSON.parse(savedVisitors)
-        setVisitors(parsedVisitors)
-      } else {
-        const defaultVisitors: Visitor[] = [
-          {
-            id: 'visitor_13800138001',
-            name: '游客0001',
-            phone: '138****0001',
-            avatar: '1',
-            lastMessage: '您好，请问抽奖怎么参与？',
-            lastTime: '刚刚',
-            unread: 1,
-          },
-          {
-            id: 'visitor_13800138002',
-            name: '游客0002',
-            phone: '139****0002',
-            avatar: '2',
-            lastMessage: '奖品什么时候可以领取？',
-            lastTime: '5分钟前',
-            unread: 0,
-          },
-        ]
-        setVisitors(defaultVisitors)
-        localStorage.setItem('staff_visitors', JSON.stringify(defaultVisitors))
-      }
+  // 加载游客列表
+  const loadVisitors = () => {
+    const savedVisitors = localStorage.getItem('staff_visitors')
+    if (savedVisitors) {
+      const parsedVisitors = JSON.parse(savedVisitors)
+      setVisitors(parsedVisitors)
     }
+  }
 
+  useEffect(() => {
     loadVisitors()
+    // 每秒刷新游客列表
     const timer = setInterval(loadVisitors, 1000)
     return () => clearInterval(timer)
   }, [])
 
+  // 加载选中游客的消息
   useEffect(() => {
     if (selectedVisitor) {
-      const loadMessages = () => {
-        const savedMessages = localStorage.getItem(`chat_messages_${selectedVisitor.id}`)
-        if (savedMessages) {
-          const parsedMessages = JSON.parse(savedMessages)
-          setMessages(parsedMessages)
-        } else {
-          const defaultMessages: Message[] = [
-            {
-              id: '1',
-              sender: 'visitor',
-              content: '您好，请问抽奖怎么参与？',
-              timestamp: '10:00',
-              type: 'text',
-            },
-            {
-              id: '2',
-              sender: 'staff',
-              content: '您好！参与抽奖需要先登录账号，然后上传古城内的消费凭证获取抽奖次数。',
-              timestamp: '10:01',
-              type: 'text',
-            },
-          ]
-          setMessages(defaultMessages)
-          localStorage.setItem(`chat_messages_${selectedVisitor.id}`, JSON.stringify(defaultMessages))
-        }
+      const savedMessages = localStorage.getItem(`chat_messages_${selectedVisitor.id}`)
+      if (savedMessages) {
+        setMessages(JSON.parse(savedMessages))
+      } else {
+        setMessages([])
       }
+    }
+  }, [selectedVisitor, refreshKey])
 
-      loadMessages()
-      const timer = setInterval(loadMessages, 1000)
+  // 每秒检查消息更新
+  useEffect(() => {
+    if (selectedVisitor) {
+      const timer = setInterval(() => {
+        setRefreshKey(k => k + 1)
+      }, 1000)
       return () => clearInterval(timer)
     }
   }, [selectedVisitor])
@@ -122,25 +89,6 @@ export default function StaffChat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
-
-  useEffect(() => {
-    if (isTyping) {
-      const timer = setTimeout(() => {
-        setIsTyping(false)
-        setMessages([
-          ...messages,
-          {
-            id: Date.now().toString(),
-            sender: 'visitor',
-            content: '好的，我知道了',
-            timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-            type: 'text',
-          },
-        ])
-      }, 2000)
-      return () => clearTimeout(timer)
-    }
-  }, [isTyping, messages])
 
   const handleSend = () => {
     if (!inputMessage.trim() || !selectedVisitor) return
@@ -150,14 +98,20 @@ export default function StaffChat() {
       sender: 'staff',
       content: inputMessage,
       timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-      type: 'text',
+      visitorId: selectedVisitor.id,
     }
 
-    const updatedMessages = [...messages, newMessage]
-    setMessages(updatedMessages)
-    setInputMessage('')
+    // 保存消息到 localStorage
+    const savedMessages = localStorage.getItem(`chat_messages_${selectedVisitor.id}`)
+    const currentMessages: Message[] = savedMessages ? JSON.parse(savedMessages) : []
+    const updatedMessages = [...currentMessages, newMessage]
     localStorage.setItem(`chat_messages_${selectedVisitor.id}`, JSON.stringify(updatedMessages))
 
+    // 更新消息列表显示
+    setMessages(updatedMessages)
+    setInputMessage('')
+
+    // 更新游客列表中的最后消息
     const savedVisitors = localStorage.getItem('staff_visitors')
     if (savedVisitors) {
       const visitorsList = JSON.parse(savedVisitors)
@@ -169,12 +123,11 @@ export default function StaffChat() {
       localStorage.setItem('staff_visitors', JSON.stringify(updatedVisitors))
       setVisitors(updatedVisitors)
     }
-
-    setIsTyping(true)
   }
 
   const handleSelectVisitor = (visitor: Visitor) => {
     setSelectedVisitor(visitor)
+    // 清除未读标记
     const savedVisitors = localStorage.getItem('staff_visitors')
     if (savedVisitors) {
       const visitorsList = JSON.parse(savedVisitors)
@@ -194,6 +147,17 @@ export default function StaffChat() {
     navigate('/')
   }
 
+  const handleRefresh = () => {
+    loadVisitors()
+    if (selectedVisitor) {
+      const savedMessages = localStorage.getItem(`chat_messages_${selectedVisitor.id}`)
+      if (savedMessages) {
+        setMessages(JSON.parse(savedMessages))
+      }
+    }
+    setRefreshKey(k => k + 1)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 shadow-sm">
@@ -208,13 +172,22 @@ export default function StaffChat() {
             </Link>
             <h1 className="text-xl font-serif font-bold text-gray-800">工作人员后台</h1>
           </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center px-4 py-2 border border-gray-300 rounded hover:bg-gray-100 transition-colors text-gray-700"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            退出登录
-          </button>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={handleRefresh}
+              className="flex items-center px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors text-gray-700"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              刷新
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center px-4 py-2 border border-gray-300 rounded hover:bg-gray-100 transition-colors text-gray-700"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              退出登录
+            </button>
+          </div>
         </div>
       </header>
 
@@ -237,45 +210,63 @@ export default function StaffChat() {
               </Link>
             ))}
           </nav>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-6">
+            <h4 className="font-semibold text-blue-800 mb-2 text-sm">使用说明</h4>
+            <ul className="text-xs text-blue-700 space-y-1">
+              <li>• 左侧显示正在咨询的游客</li>
+              <li>• 点击游客查看对话</li>
+              <li>• 在下方输入框回复消息</li>
+              <li>• 游客发送消息会自动显示</li>
+            </ul>
+          </div>
         </aside>
 
         <main className="flex-1 flex">
           <div className="w-80 bg-white rounded-xl shadow-sm mr-6 flex flex-col">
-            <div className="p-4 border-b border-gray-200">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-800">客服消息</h3>
-              <p className="text-sm text-gray-500 mt-1">
-                共 {visitors.length} 位用户
-              </p>
+              <span className="text-sm text-gray-500">
+                {visitors.length} 位用户
+              </span>
             </div>
 
             <div className="flex-1 overflow-y-auto">
-              {visitors.map((visitor) => (
-                <button
-                  key={visitor.id}
-                  onClick={() => handleSelectVisitor(visitor)}
-                  className={`w-full p-4 text-left hover:bg-gray-50 transition-colors flex items-center space-x-3 ${
-                    selectedVisitor?.id === visitor.id ? 'bg-blue-50' : ''
-                  }`}
-                >
-                  <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
-                    <User className="w-6 h-6 text-gray-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-gray-800 truncate">{visitor.name}</span>
-                      <span className="text-xs text-gray-400">{visitor.lastTime}</span>
+              {visitors.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                  <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p className="text-sm">暂无游客咨询</p>
+                  <p className="text-xs mt-1">等待游客发送消息...</p>
+                </div>
+              ) : (
+                visitors.map((visitor) => (
+                  <button
+                    key={visitor.id}
+                    onClick={() => handleSelectVisitor(visitor)}
+                    className={`w-full p-4 text-left hover:bg-gray-50 transition-colors flex items-center space-x-3 border-b border-gray-100 ${
+                      selectedVisitor?.id === visitor.id ? 'bg-blue-50' : ''
+                    }`}
+                  >
+                    <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
+                      <User className="w-6 h-6 text-gray-600" />
                     </div>
-                    <p className="text-sm text-gray-500 truncate mt-1">
-                      {visitor.lastMessage}
-                    </p>
-                  </div>
-                  {visitor.unread > 0 && (
-                    <span className="w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                      {visitor.unread}
-                    </span>
-                  )}
-                </button>
-              ))}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-gray-800 truncate">{visitor.name}</span>
+                        <span className="text-xs text-gray-400">{visitor.lastTime}</span>
+                      </div>
+                      <p className="text-sm text-gray-500 truncate mt-1">
+                        {visitor.lastMessage}
+                      </p>
+                    </div>
+                    {visitor.unread > 0 && (
+                      <span className="w-6 h-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                        {visitor.unread}
+                      </span>
+                    )}
+                  </button>
+                ))
+              )}
             </div>
           </div>
 
@@ -324,18 +315,6 @@ export default function StaffChat() {
                       </div>
                     </div>
                   ))}
-
-                  {isTyping && (
-                    <div className="flex justify-start">
-                      <div className="bg-gray-100 px-4 py-3 rounded-lg rounded-bl-none">
-                        <div className="flex space-x-1">
-                          <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                          <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                          <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                   <div ref={messagesEndRef} />
                 </div>
 
@@ -349,7 +328,7 @@ export default function StaffChat() {
                       value={inputMessage}
                       onChange={(e) => setInputMessage(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                      placeholder="输入消息..."
+                      placeholder="输入回复消息..."
                       className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-600"
                       style={{ color: '#1f2937' }}
                     />
@@ -372,6 +351,7 @@ export default function StaffChat() {
                 <div className="text-center">
                   <MessageCircle className="w-16 h-16 mx-auto text-gray-300 mb-4" />
                   <p className="text-gray-500">选择一个用户开始聊天</p>
+                  <p className="text-sm text-gray-400 mt-2">点击左侧列表中的游客查看对话</p>
                 </div>
               </div>
             )}

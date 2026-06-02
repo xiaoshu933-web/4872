@@ -79,7 +79,6 @@ export default function Chat() {
         const updatedMessages = [...messages, newMessage]
         setMessages(updatedMessages)
         localStorage.setItem(`chat_messages_${visitorKey}`, JSON.stringify(updatedMessages))
-        localStorage.setItem(`staff_unread_${visitorKey}`, '1')
       }, 2000)
       return () => clearTimeout(timer)
     }
@@ -100,30 +99,40 @@ export default function Chat() {
     setMessages(updatedMessages)
     setInputMessage('')
     localStorage.setItem(`chat_messages_${visitorKey}`, JSON.stringify(updatedMessages))
-    localStorage.setItem(`staff_unread_${visitorKey}`, '1')
-    
+
+    // 更新游客列表
+    const now = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
     const staffVisitors = localStorage.getItem('staff_visitors')
     const visitorsList = staffVisitors ? JSON.parse(staffVisitors) : []
+
     if (!visitorsList.find((v: any) => v.id === visitorKey)) {
+      // 新游客
       visitorsList.push({
         id: visitorKey,
         name: `游客${visitorId.slice(-4)}`,
         phone: visitorId,
         avatar: visitorId.slice(-1).toUpperCase(),
         lastMessage: inputMessage,
-        lastTime: '刚刚',
-        unread: 1,
+        lastTime: now,
+        unread: 0,
+        hasNewMessage: true,
       })
-      localStorage.setItem('staff_visitors', JSON.stringify(visitorsList))
     } else {
-      const updatedVisitors = visitorsList.map((v: any) =>
-        v.id === visitorKey
-          ? { ...v, lastMessage: inputMessage, lastTime: '刚刚', unread: (v.unread || 0) + 1 }
-          : v
-      )
-      localStorage.setItem('staff_visitors', JSON.stringify(updatedVisitors))
+      // 更新现有游客
+      visitorsList.forEach((v: any) => {
+        if (v.id === visitorKey) {
+          v.lastMessage = inputMessage
+          v.lastTime = now
+          v.hasNewMessage = true
+        }
+      })
     }
-    
+    localStorage.setItem('staff_visitors', JSON.stringify(visitorsList))
+
+    // 标记有新消息
+    localStorage.setItem(`visitor_has_new_message_${visitorKey}`, 'true')
+    localStorage.setItem(`staff_new_message_time_${visitorKey}`, now.toString())
+
     setIsTyping(true)
   }
 
