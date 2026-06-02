@@ -7,7 +7,7 @@ import { lotteryService } from '@/services/lottery'
 
 export default function Lottery() {
   const navigate = useNavigate()
-  const { user, isAuthenticated } = useUserStore()
+  const { user, isAuthenticated, hydrateFromLocalStorage } = useUserStore()
   const { drawCount, setDrawCount, isDrawing, setIsDrawing, addRecord } = useLotteryStore()
   const [showResultModal, setShowResultModal] = useState(false)
   const [result, setResult] = useState<any>(null)
@@ -15,6 +15,10 @@ export default function Lottery() {
     transactionId: '',
     platform: 'wechat' as 'wechat' | 'alipay',
   })
+
+  useEffect(() => {
+    hydrateFromLocalStorage()
+  }, [hydrateFromLocalStorage])
 
   useEffect(() => {
     if (isAuthenticated) {

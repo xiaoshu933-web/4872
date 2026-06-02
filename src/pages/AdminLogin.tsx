@@ -2,27 +2,31 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Shield, Key } from 'lucide-react'
 import { useUserStore } from '@/stores/userStore'
+import type { User } from '@/types'
 
 export default function AdminLogin() {
   const navigate = useNavigate()
-  const { user, login } = useUserStore()
+  const { user, login, hydrateFromLocalStorage, isAuthenticated } = useUserStore()
   const [keyword, setKeyword] = useState('')
   const [error, setError] = useState('')
 
   useEffect(() => {
-    const role = localStorage.getItem('role')
-    if (role === 'admin' && user) {
+    hydrateFromLocalStorage()
+    if (isAuthenticated || (user && localStorage.getItem('role') === 'admin')) {
       navigate('/admin')
     }
-  }, [user, navigate])
+  }, [user, isAuthenticated, navigate, hydrateFromLocalStorage])
 
   const handleLogin = () => {
     if (keyword === '地球') {
       const token = 'admin-token-' + Date.now()
-      const userData = {
+      const now = new Date().toISOString()
+      const userData: User = {
         id: 'admin-' + Date.now(),
         phone: '管理员',
         role: 'admin',
+        createdAt: now,
+        updatedAt: now,
       }
       login(token, userData)
       navigate('/admin')

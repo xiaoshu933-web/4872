@@ -1,18 +1,24 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Shield, Key } from 'lucide-react'
+import { useUserStore } from '@/stores/userStore'
+import type { User } from '@/types'
 
 export default function StaffLogin() {
   const navigate = useNavigate()
+  const { login, isAuthenticated, hydrateFromLocalStorage } = useUserStore()
   const [keyword, setKeyword] = useState('')
   const [error, setError] = useState('')
 
   useEffect(() => {
-    const role = localStorage.getItem('role')
-    if (role === 'staff') {
-      navigate('/staff')
+    hydrateFromLocalStorage()
+    if (isAuthenticated) {
+      const role = localStorage.getItem('role')
+      if (role === 'staff') {
+        navigate('/staff')
+      }
     }
-  }, [navigate])
+  }, [isAuthenticated, navigate, hydrateFromLocalStorage])
 
   const handleLogin = () => {
     if (!keyword.trim()) {
@@ -22,8 +28,15 @@ export default function StaffLogin() {
 
     if (keyword.trim() === '爆炸') {
       const token = 'staff-token-' + Date.now()
-      localStorage.setItem('token', token)
-      localStorage.setItem('role', 'staff')
+      const now = new Date().toISOString()
+      const user: User = {
+        id: 'staff-' + Date.now(),
+        phone: '工作人员',
+        role: 'staff',
+        createdAt: now,
+        updatedAt: now,
+      }
+      login(token, user)
       navigate('/staff')
     } else {
       setError('密钥错误，请重试')
@@ -62,7 +75,7 @@ export default function StaffLogin() {
                 style={{ color: '#1f2937' }}
                 autoComplete="off"
                 autoCapitalize="off"
-                onKeyPress={(e) => {
+                onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     handleLogin()
                   }

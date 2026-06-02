@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Gift, Phone, CreditCard } from 'lucide-react'
+import { useUserStore } from '@/stores/userStore'
+import type { User } from '@/types'
 
 export default function VisitorLogin() {
   const navigate = useNavigate()
+  const { login, isAuthenticated, hydrateFromLocalStorage } = useUserStore()
   const [formData, setFormData] = useState({
     phone: '',
     code: '',
@@ -13,12 +16,14 @@ export default function VisitorLogin() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    const role = localStorage.getItem('role')
-    if (token && role === 'visitor') {
-      navigate('/lottery')
+    hydrateFromLocalStorage()
+    if (isAuthenticated) {
+      const role = localStorage.getItem('role')
+      if (role === 'visitor') {
+        navigate('/lottery')
+      }
     }
-  }, [navigate])
+  }, [isAuthenticated, navigate, hydrateFromLocalStorage])
 
   useEffect(() => {
     if (countdown > 0) {
@@ -54,10 +59,15 @@ export default function VisitorLogin() {
 
     const mockToken = 'visitor_token_' + Date.now()
     const mockUserId = 'visitor_' + Date.now()
-    localStorage.setItem('token', mockToken)
-    localStorage.setItem('role', 'visitor')
-    localStorage.setItem('userId', mockUserId)
-    localStorage.setItem('visitorPhone', formData.phone)
+    const now = new Date().toISOString()
+    const user: User = {
+      id: mockUserId,
+      phone: formData.phone,
+      role: 'visitor',
+      createdAt: now,
+      updatedAt: now,
+    }
+    login(mockToken, user)
     navigate('/lottery')
   }
 
