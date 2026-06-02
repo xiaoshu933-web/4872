@@ -10,7 +10,8 @@ export default function AdminLogin() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (user) {
+    const role = localStorage.getItem('role')
+    if (role === 'admin' && user) {
       navigate('/admin')
     }
   }, [user, navigate])

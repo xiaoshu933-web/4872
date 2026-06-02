@@ -2,6 +2,23 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { MessageCircle, Gift, Store, User, ChevronDown, Users, LogOut, Shield, Send as SendIcon } from 'lucide-react'
 
+const DEFAULT_CONFIG = {
+  copyright: '地球明天爆炸',
+}
+
+function loadConfig() {
+  try {
+    const saved = localStorage.getItem('night_festival_config')
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      return { ...DEFAULT_CONFIG, ...parsed }
+    }
+  } catch (e) {
+    console.error('加载配置失败:', e)
+  }
+  return DEFAULT_CONFIG
+}
+
 interface ChatMessage {
   id: string
   content: string
@@ -13,6 +30,7 @@ export default function Layout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [userRole, setUserRole] = useState<string | null>(null)
+  const [config, setConfig] = useState(DEFAULT_CONFIG)
   const [showChat, setShowChat] = useState(false)
   const [showLoginDropdown, setShowLoginDropdown] = useState(false)
   const [showUserDropdown, setShowUserDropdown] = useState(false)
@@ -66,6 +84,7 @@ export default function Layout() {
   useEffect(() => {
     const role = localStorage.getItem('role')
     setUserRole(role)
+    setConfig(loadConfig())
   }, [])
 
   const handleLogout = () => {
@@ -256,7 +275,7 @@ export default function Layout() {
             </div>
 
             <div className="text-xs text-gray-400">
-              © {new Date().getFullYear()} 地球明天爆炸 · 四八七十二·北魏夜游生活节
+              © {new Date().getFullYear()} {config.copyright} · 四八七十二·北魏夜游生活节
             </div>
           </div>
         </div>
