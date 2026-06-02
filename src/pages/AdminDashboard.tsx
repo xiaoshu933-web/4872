@@ -28,30 +28,67 @@ interface Prize {
   status: 'active' | 'inactive'
 }
 
-interface BackgroundItem {
-  index: number
-  url: string
+const DEFAULT_CONFIG = {
+  mainTitle: '日落后出发',
+  activityTime: '夏季：6月15日至9月15日\n冬季：12月1日至次年3月10日',
+  organizer: '大同市人民政府',
+  undertaker: '大同市文化旅游投资集团有限公司、大同古城文化旅游发展有限公司',
+  locationLine1: '大同市平城区',
+  locationLine2: '大同古城',
+  copyright: '地球明天爆炸',
+  background1: '',
+  background2: '',
+  background3: '',
+}
+
+const CONFIG_KEY = 'night_festival_config'
+
+function loadConfigFromStorage() {
+  try {
+    const saved = localStorage.getItem(CONFIG_KEY)
+    if (saved) {
+      return { ...DEFAULT_CONFIG, ...JSON.parse(saved) }
+    }
+  } catch (e) {
+    console.error('加载配置失败:', e)
+  }
+  try {
+    const bg1 = localStorage.getItem('admin_background_1') || ''
+    const bg2 = localStorage.getItem('admin_background_2') || ''
+    const bg3 = localStorage.getItem('admin_background_3') || ''
+    const content = localStorage.getItem('admin_content')
+    if (content) {
+      try {
+        const parsedContent = JSON.parse(content)
+        return { ...DEFAULT_CONFIG, ...parsedContent, background1: bg1, background2: bg2, background3: bg3 }
+      } catch {}
+    }
+    return { ...DEFAULT_CONFIG, background1: bg1, background2: bg2, background3: bg3 }
+  } catch {
+    return DEFAULT_CONFIG
+  }
+  return DEFAULT_CONFIG
+}
+
+function saveConfigToStorage(config: typeof DEFAULT_CONFIG) {
+  try {
+    localStorage.setItem(CONFIG_KEY, JSON.stringify(config))
+    return true
+  } catch (e) {
+    console.error('保存配置失败:', e)
+    alert('保存失败：图片可能太大，请使用较小的图片或使用图片URL')
+    return false
+  }
 }
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('content')
+  const [config, setConfig] = useState(DEFAULT_CONFIG)
 
-  const [contentConfig, setContentConfig] = useState({
-    mainTitle: '日落后出发',
-    activityTime: '夏季：6月15日至9月15日\n冬季：12月1日至次年3月10日',
-    organizer: '大同市人民政府',
-    undertaker: '大同市文化旅游投资集团有限公司、大同古城文化旅游发展有限公司',
-    locationLine1: '大同市平城区',
-    locationLine2: '大同古城',
-    copyright: '地球明天爆炸',
-  })
-
-  const [backgrounds, setBackgrounds] = useState<BackgroundItem[]>([
-    { index: 1, url: '' },
-    { index: 2, url: '' },
-    { index: 3, url: '' },
-  ])
+  useEffect(() => {
+    setConfig(loadConfigFromStorage())
+  }, [])
 
   const [prizes, setPrizes] = useState<Prize[]>([
     { id: '1', name: '优惠券', level: 'participation', description: '合作商户优惠券', probability: 80, stock: 100, status: 'active' },
@@ -66,64 +103,50 @@ export default function AdminDashboard() {
   const [editingPrize, setEditingPrize] = useState<Prize | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
 
-  useEffect(() => {
-    const savedConfig = localStorage.getItem('admin_content')
-    if (savedConfig) {
-      try {
-        setContentConfig(JSON.parse(savedConfig))
-      } catch (e) {
-        console.log('Error parsing config:', e)
-      }
-    }
-    const bg1 = localStorage.getItem('admin_background_1') || ''
-    const bg2 = localStorage.getItem('admin_background_2') || ''
-    const bg3 = localStorage.getItem('admin_background_3') || ''
-    setBackgrounds([
-      { index: 1, url: bg1 },
-      { index: 2, url: bg2 },
-      { index: 3, url: bg3 },
-    ])
-  }, [])
+  const backgrounds = [
+    { index: 1, url: config.background1 },
+    { index: 2, url: config.background2 },
+    { index: 3, url: config.background3 },
+  ]
 
   const handleImageUpload = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        const url = event.target?.result as string
-        const key = `admin_background_${index}`
-        localStorage.setItem(key, url)
-        setBackgrounds((prev) =>
-          prev.map((bg) => (bg.index === index ? { ...bg, url } : bg))
-        )
-      }
-      reader.readAsDataURL(file)
+    if (!file) return
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert('图片过大，请使用 2MB 以下的图片')
+      return
     }
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const url = event.target?.result as string
+      const bgKey = `background${index}` as keyof typeof DEFAULT_CONFIG
+      const newConfig = { ...config, [bgKey]: url }
+      setConfig(newConfig)
+      saveConfigToStorage(newConfig)
+    }
+    reader.readAsDataURL(file)
   }
 
   const handleUrlInput = (index: number, url: string) => {
-    const key = `admin_background_${index}`
-    if (url) {
-      localStorage.setItem(key, url)
-    } else {
-      localStorage.removeItem(key)
-    }
-    setBackgrounds((prev) =>
-      prev.map((bg) => (bg.index === index ? { ...bg, url } : bg))
-    )
+    const bgKey = `background${index}` as keyof typeof DEFAULT_CONFIG
+    const newConfig = { ...config, [bgKey]: url }
+    setConfig(newConfig)
+    saveConfigToStorage(newConfig)
   }
 
   const clearBackground = (index: number) => {
-    const key = `admin_background_${index}`
-    localStorage.removeItem(key)
-    setBackgrounds((prev) =>
-      prev.map((bg) => (bg.index === index ? { ...bg, url: '' } : bg))
-    )
+    const bgKey = `background${index}` as keyof typeof DEFAULT_CONFIG
+    const newConfig = { ...config, [bgKey]: '' }
+    setConfig(newConfig)
+    saveConfigToStorage(newConfig)
   }
 
   const handleSaveContent = () => {
-    localStorage.setItem('admin_content', JSON.stringify(contentConfig))
-    alert('保存成功！请刷新首页查看效果')
+    if (saveConfigToStorage(config)) {
+      alert('保存成功！请刷新首页查看效果')
+    }
   }
 
   const handleLogout = () => {
@@ -299,9 +322,9 @@ export default function AdminDashboard() {
                     </label>
                     <input
                       type="text"
-                      value={contentConfig.mainTitle}
+                      value={config.mainTitle}
                       onChange={(e) =>
-                        setContentConfig({ ...contentConfig, mainTitle: e.target.value })
+                        setConfig({ ...config, mainTitle: e.target.value })
                       }
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-600 transition-colors bg-white"
                       style={{ color: '#1f2937' }}
@@ -314,9 +337,9 @@ export default function AdminDashboard() {
                     </label>
                     <input
                       type="text"
-                      value={contentConfig.locationLine1}
+                      value={config.locationLine1}
                       onChange={(e) =>
-                        setContentConfig({ ...contentConfig, locationLine1: e.target.value })
+                        setConfig({ ...config, locationLine1: e.target.value })
                       }
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-600 transition-colors bg-white"
                       style={{ color: '#1f2937' }}
@@ -329,9 +352,9 @@ export default function AdminDashboard() {
                     </label>
                     <input
                       type="text"
-                      value={contentConfig.locationLine2}
+                      value={config.locationLine2}
                       onChange={(e) =>
-                        setContentConfig({ ...contentConfig, locationLine2: e.target.value })
+                        setConfig({ ...config, locationLine2: e.target.value })
                       }
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-600 transition-colors bg-white"
                       style={{ color: '#1f2937' }}
@@ -343,9 +366,9 @@ export default function AdminDashboard() {
                       活动时间
                     </label>
                     <textarea
-                      value={contentConfig.activityTime}
+                      value={config.activityTime}
                       onChange={(e) =>
-                        setContentConfig({ ...contentConfig, activityTime: e.target.value })
+                        setConfig({ ...config, activityTime: e.target.value })
                       }
                       rows={3}
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-600 transition-colors bg-white resize-none"
@@ -362,9 +385,9 @@ export default function AdminDashboard() {
                     </label>
                     <input
                       type="text"
-                      value={contentConfig.organizer}
+                      value={config.organizer}
                       onChange={(e) =>
-                        setContentConfig({ ...contentConfig, organizer: e.target.value })
+                        setConfig({ ...config, organizer: e.target.value })
                       }
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-600 transition-colors bg-white"
                       style={{ color: '#1f2937' }}
@@ -376,9 +399,9 @@ export default function AdminDashboard() {
                       承办单位
                     </label>
                     <textarea
-                      value={contentConfig.undertaker}
+                      value={config.undertaker}
                       onChange={(e) =>
-                        setContentConfig({ ...contentConfig, undertaker: e.target.value })
+                        setConfig({ ...config, undertaker: e.target.value })
                       }
                       rows={2}
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-600 transition-colors bg-white resize-none"
@@ -392,9 +415,9 @@ export default function AdminDashboard() {
                     </label>
                     <input
                       type="text"
-                      value={contentConfig.copyright}
+                      value={config.copyright}
                       onChange={(e) =>
-                        setContentConfig({ ...contentConfig, copyright: e.target.value })
+                        setConfig({ ...config, copyright: e.target.value })
                       }
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-600 transition-colors bg-white"
                       style={{ color: '#1f2937' }}
@@ -460,7 +483,7 @@ export default function AdminDashboard() {
                             {bg.url ? '点击更换图片' : '点击上传图片'}
                           </p>
                           <p className="text-xs text-gray-500">
-                            支持 JPG、PNG、GIF 格式，建议尺寸 1920x1080
+                            支持 JPG、PNG、GIF 格式，建议尺寸 1920x1080，单张不超过 2MB
                           </p>
                         </label>
                       </div>
@@ -499,7 +522,7 @@ export default function AdminDashboard() {
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                     <p className="text-sm text-blue-700">
                       <strong>提示：</strong>上传2张或以上图片后，首页会自动开启轮播效果，
-                      每5秒自动切换一次，也可以点击底部小圆点手动切换。
+                      每5秒自动切换一次，也可以点击底部小圆点手动切换。配置会自动保存。
                     </p>
                   </div>
                 </div>

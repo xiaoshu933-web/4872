@@ -1,57 +1,40 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Gift, Upload, Scan, Home as HomeIcon } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Gift, Upload, Scan, Phone, User, CreditCard } from 'lucide-react'
+import { useUserStore } from '@/stores/userStore'
+import { useLotteryStore } from '@/stores/lotteryStore'
+import { lotteryService } from '@/services/lottery'
 
 export default function Lottery() {
   const navigate = useNavigate()
+  const { user, isAuthenticated } = useUserStore()
+  const { drawCount, setDrawCount, isDrawing, setIsDrawing, addRecord } = useLotteryStore()
+  const [showBindModal, setShowBindModal] = useState(false)
   const [showResultModal, setShowResultModal] = useState(false)
   const [result, setResult] = useState<any>(null)
-  const [drawCount, setDrawCount] = useState<{ remainingCount: number; totalCount: number }>({
-    remainingCount: 0,
-    totalCount: 0,
-  })
-  const [isDrawing, setIsDrawing] = useState(false)
   const [receiptForm, setReceiptForm] = useState({
     transactionId: '',
     platform: 'wechat' as 'wechat' | 'alipay',
   })
-  const [visitorPhone, setVisitorPhone] = useState('')
-  const [records, setRecords] = useState<any[]>([])
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    const role = localStorage.getItem('role')
-    if (!token || role !== 'visitor') {
-      navigate('/visitor/login')
-      return
+    if (isAuthenticated) {
+      fetchDrawCount()
     }
+  }, [isAuthenticated])
 
-    const phone = localStorage.getItem('visitorPhone') || '游客'
-    setVisitorPhone(phone)
-
-    const savedCount = localStorage.getItem('lotteryCount')
-    if (savedCount) {
-      setDrawCount(JSON.parse(savedCount))
+  const fetchDrawCount = async () => {
+    try {
+      const response = await lotteryService.getDrawCount()
+      if (response.success) {
+        setDrawCount(response.data)
+      }
+    } catch (error) {
+      console.error('获取抽奖次数失败:', error)
     }
-
-    const savedRecords = localStorage.getItem('lotteryRecords')
-    if (savedRecords) {
-      setRecords(JSON.parse(savedRecords))
-    }
-  }, [navigate])
-
-  const updateDrawCount = (newCount: { remainingCount: number; totalCount: number }) => {
-    setDrawCount(newCount)
-    localStorage.setItem('lotteryCount', JSON.stringify(newCount))
   }
 
-  const addRecord = (record: any) => {
-    const newRecords = [record, ...records]
-    setRecords(newRecords)
-    localStorage.setItem('lotteryRecords', JSON.stringify(newRecords))
-  }
-
-  const handleDraw = () => {
+  const handleDraw = async () => {
     if (!drawCount || drawCount.remainingCount <= 0) {
       alert('没有抽奖次数，请先上传消费凭证')
       return
@@ -59,321 +42,309 @@ export default function Lottery() {
 
     setIsDrawing(true)
 
-    setTimeout(() => {
-      const prizes = [
-        { name: '优惠券', level: 'participation', description: '合作商户优惠券' },
-        { name: '文创纪念品', level: 'participation', description: '北魏文化纪念品' },
-        { name: '饮品代金券', level: 'participation', description: '古城饮品店代金券' },
-        { name: '景区门票', level: 'second', description: '大同古城景区门票一张' },
-        { name: '汉服体验', level: 'second', description: '汉服体验一小时' },
-        { name: '民宿住宿券', level: 'first', description: '合作民宿免费住宿一晚' },
-        { name: '隐藏大奖', level: 'hidden', description: '云阙景观大床房住宿券' },
-      ]
+    try {
+      const response = await lotteryService.draw()
 
-      const random = Math.random()
-      let selectedPrize
-
-      if (random < 0.001) {
-        selectedPrize = prizes[6]
-      } else if (random < 0.03) {
-        selectedPrize = prizes[5]
-      } else if (random < 0.10) {
-        selectedPrize = prizes[4]
-      } else if (random < 0.20) {
-        selectedPrize = prizes[3]
-      } else {
-        selectedPrize = prizes[Math.floor(Math.random() * 3)]
+      if (response.success) {
+        setResult(response.data)
+        setShowResultModal(true)
+        addRecord({
+          id: Date.now().toString(),
+          userId: user!.id,
+          prizeId: response.data.prize.id,
+          prize: response.data.prize,
+          verificationCode: response.data.verificationCode,
+          isVerified: false,
+          createdAt: new Date().toISOString(),
+        })
+        fetchDrawCount()
       }
-
-      const verificationCode = 'LC' + Date.now().toString().slice(-8)
-
-      const record = {
-        id: Date.now().toString(),
-        prize: selectedPrize,
-        verificationCode,
-        createdAt: new Date().toISOString(),
-      }
-
-      setResult(record)
-      setShowResultModal(true)
-      addRecord(record)
-
-      const newCount = {
-        remainingCount: drawCount.remainingCount - 1,
-        totalCount: drawCount.totalCount,
-      }
-      updateDrawCount(newCount)
-
+    } catch (error) {
+      alert('抽奖失败，请重试')
+    } finally {
       setIsDrawing(false)
-    }, 1500)
+    }
   }
 
-  const handleUploadReceipt = () => {
+  const handleUploadReceipt = async () => {
     if (!receiptForm.transactionId) {
       alert('请输入交易单号')
       return
     }
 
-    if (receiptForm.transactionId.length < 8) {
-      alert('请输入有效的交易单号')
-      return
+    try {
+      const response = await lotteryService.uploadReceipt(
+        receiptForm.transactionId,
+        receiptForm.platform
+      )
+
+      if (response.success) {
+        alert(`验证成功，获得 ${response.data.drawCountAdded} 次抽奖机会！`)
+        fetchDrawCount()
+        setReceiptForm({ transactionId: '', platform: 'wechat' })
+      } else {
+        alert(response.message || '验证失败')
+      }
+    } catch (error) {
+      alert('验证失败，请检查交易单号是否正确')
     }
-
-    const randomBonus = Math.floor(Math.random() * 3) + 1
-    const currentRemaining = drawCount?.remainingCount || 0
-    const currentTotal = drawCount?.totalCount || 0
-
-    const newCount = {
-      remainingCount: currentRemaining + randomBonus,
-      totalCount: currentTotal + randomBonus,
-    }
-
-    updateDrawCount(newCount)
-    setReceiptForm({ transactionId: '', platform: 'wechat' })
-    alert(`消费凭证验证成功！获得 ${randomBonus} 次抽奖机会`)
   }
 
-  const handleScanQR = () => {
-    const randomBonus = 1
-    const currentRemaining = drawCount?.remainingCount || 0
-    const currentTotal = drawCount?.totalCount || 0
-
-    const newCount = {
-      remainingCount: currentRemaining + randomBonus,
-      totalCount: currentTotal + randomBonus,
+  const getLevelName = (level: string) => {
+    const names: Record<string, string> = {
+      participation: '参与奖',
+      second: '二等奖',
+      first: '一等奖',
+      hidden: '隐藏大奖',
     }
-
-    updateDrawCount(newCount)
-    alert(`扫码成功！获得 ${randomBonus} 次额外抽奖机会`)
+    return names[level] || '参与奖'
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('role')
-    localStorage.removeItem('userId')
-    localStorage.removeItem('visitorPhone')
-    navigate('/')
+  const getLevelColor = (level: string) => {
+    const colors: Record<string, string> = {
+      participation: 'text-gray-400',
+      second: 'text-blue-400',
+      first: 'text-purple-400',
+      hidden: 'text-gold animate-glow',
+    }
+    return colors[level] || 'text-gray-400'
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Link
-              to="/"
-              className="flex items-center text-gray-700 hover:text-gray-900 transition-colors font-medium"
-            >
-              <HomeIcon className="w-5 h-5 mr-2" />
-              返回首页
-            </Link>
-            <h1 className="text-xl font-serif font-bold text-gray-800">抽奖中心</h1>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">{visitorPhone}</span>
+    <div className="min-h-screen py-12 px-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-12">
+          <Gift className="w-20 h-20 mx-auto mb-4 text-gold" />
+          <h1 className="text-4xl font-serif font-bold gradient-text mb-4">游客抽奖</h1>
+          <p className="text-gray-400">消费即可参与抽奖，惊喜好礼等你拿</p>
+        </div>
+
+        {!isAuthenticated ? (
+          <div className="card max-w-md mx-auto text-center py-12">
+            <p className="text-gray-400 mb-6">登录后即可参与抽奖</p>
             <button
-              onClick={handleLogout}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors text-gray-700"
+              onClick={() => setShowBindModal(true)}
+              className="btn-primary"
             >
-              退出登录
+              登录参与
             </button>
           </div>
-        </div>
-      </header>
-
-      <main className="max-w-6xl mx-auto px-6 py-8">
-
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm p-8 text-center border border-gray-100">
-            <div className="text-5xl font-bold text-gray-800 mb-4">
-              {drawCount?.remainingCount || 0}
-            </div>
-            <p className="text-gray-600 text-lg">剩余抽奖次数</p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-8 text-center border border-gray-100">
-            <div className="text-5xl font-bold text-gray-800 mb-4">
-              {drawCount?.totalCount || 0}
-            </div>
-            <p className="text-gray-600 text-lg">累计获得次数</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm p-8 max-w-lg mx-auto mb-8 border border-gray-100">
-          <h3 className="text-2xl font-semibold mb-6 text-center text-gray-800">立即抽奖</h3>
-
-          <button
-            onClick={handleDraw}
-            disabled={isDrawing || !drawCount || drawCount.remainingCount <= 0}
-            className={`w-full py-6 rounded-lg font-bold text-2xl transition-all ${
-              isDrawing
-                ? 'bg-gray-400 text-white cursor-not-allowed'
-                : drawCount && drawCount.remainingCount > 0
-                ? 'bg-gray-800 text-white hover:bg-gray-700 shadow-lg'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            {isDrawing ? '抽奖中...' : '点击抽奖'}
-          </button>
-
-          {(!drawCount || drawCount.remainingCount <= 0) && !isDrawing && (
-            <p className="text-center text-sm text-gray-500 mt-4">
-              没有抽奖次数？请先上传消费凭证
-            </p>
-          )}
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-8">
-          <div className="bg-white rounded-xl shadow-sm p-8 border border-gray-100">
-            <div className="flex items-center mb-6">
-              <Upload className="w-8 h-8 text-gray-700 mr-3" />
-              <h3 className="text-xl font-semibold text-gray-800">上传消费凭证</h3>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm text-gray-700 mb-2 font-medium">
-                  支付平台
-                </label>
-                <div className="flex space-x-4">
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="radio"
-                      name="platform"
-                      value="wechat"
-                      checked={receiptForm.platform === 'wechat'}
-                      onChange={(e) =>
-                        setReceiptForm({ ...receiptForm, platform: 'wechat' })
-                      }
-                      className="mr-2"
-                    />
-                    <span className="text-gray-800">微信支付</span>
-                  </label>
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="radio"
-                      name="platform"
-                      value="alipay"
-                      checked={receiptForm.platform === 'alipay'}
-                      onChange={(e) =>
-                        setReceiptForm({ ...receiptForm, platform: 'alipay' })
-                      }
-                      className="mr-2"
-                    />
-                    <span className="text-gray-800">支付宝</span>
-                  </label>
+        ) : (
+          <>
+            <div className="grid md:grid-cols-2 gap-8 mb-12">
+              <div className="card text-center">
+                <div className="text-6xl font-bold text-gold mb-4">
+                  {drawCount?.remainingCount || 0}
                 </div>
+                <p className="text-gray-400">剩余抽奖次数</p>
               </div>
 
-              <div>
-                <label className="block text-sm text-gray-700 mb-2 font-medium">
-                  交易单号
-                </label>
-                <input
-                  type="text"
-                  value={receiptForm.transactionId}
-                  onChange={(e) =>
-                    setReceiptForm({ ...receiptForm, transactionId: e.target.value })
-                  }
-                  placeholder="请输入交易单号（至少8位）"
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-600 transition-colors bg-white"
-                  style={{ color: '#1f2937' }}
-                />
+              <div className="card text-center">
+                <div className="text-6xl font-bold text-sunset mb-4">
+                  {drawCount?.totalCount || 0}
+                </div>
+                <p className="text-gray-400">累计获得次数</p>
               </div>
+            </div>
+
+            <div className="card max-w-lg mx-auto mb-8">
+              <h3 className="text-xl font-semibold mb-6 text-center">立即抽奖</h3>
 
               <button
-                onClick={handleUploadReceipt}
-                className="w-full py-4 border-2 border-gray-800 text-gray-800 rounded-lg hover:bg-gray-800 hover:text-white transition-colors font-medium text-lg"
+                onClick={handleDraw}
+                disabled={!drawCount || drawCount.remainingCount <= 0 || isDrawing}
+                className={`w-full py-4 rounded-lg font-bold text-xl transition-all ${
+                  drawCount && drawCount.remainingCount > 0 && !isDrawing
+                    ? 'bg-gradient-to-r from-gold to-sunset text-primary-dark hover:scale-105'
+                    : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                }`}
               >
-                验证并获取次数
+                {isDrawing ? '抽奖中...' : '点击抽奖'}
               </button>
 
-              <p className="text-xs text-gray-500 text-center">
-                演示模式：输入任意8位以上数字即可验证
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-8 border border-gray-100">
-            <div className="flex items-center mb-6">
-              <Scan className="w-8 h-8 text-gray-700 mr-3" />
-              <h3 className="text-xl font-semibold text-gray-800">扫码获得额外机会</h3>
+              {(!drawCount || drawCount.remainingCount <= 0) && (
+                <p className="text-center text-sm text-gray-400 mt-4">
+                  没有抽奖次数？请上传消费凭证获取
+                </p>
+              )}
             </div>
 
-            <p className="text-gray-600 mb-6">
-              完成社媒发布后，向工作人员出示主页链接即可扫码获得额外抽奖机会
-            </p>
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="card">
+                <div className="flex items-center mb-4">
+                  <Upload className="w-6 h-6 text-gold mr-2" />
+                  <h3 className="text-xl font-semibold">上传消费凭证</h3>
+                </div>
 
-            <button
-              onClick={handleScanQR}
-              className="w-full py-4 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium text-lg"
-            >
-              模拟扫码核销
-            </button>
-
-            <div className="mt-8 p-6 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-700 mb-3 font-medium">发布要求：</p>
-              <ul className="text-sm text-gray-600 space-y-2">
-                <li>• 小红书/抖音发布内容</li>
-                <li>• 带指定话题 #北魏夜游生活节</li>
-                <li>• 包含现场元素（照片/视频）</li>
-                <li>• 向工作人员出示后扫码</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        {records.length > 0 && (
-          <div className="mt-12 bg-white rounded-xl shadow-sm p-8 border border-gray-100">
-            <div className="flex items-center mb-6">
-              <Gift className="w-8 h-8 text-gray-700 mr-3" />
-              <h3 className="text-xl font-semibold text-gray-800">我的奖品</h3>
-              <span className="ml-auto text-sm text-gray-500">共 {records.length} 个奖品</span>
-            </div>
-
-            <div className="space-y-3">
-              {records.slice(0, 5).map((record, index) => (
-                <div
-                  key={record.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200"
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="text-2xl">🎁</div>
-                    <div>
-                      <p className="font-semibold text-gray-800">{record.prize.name}</p>
-                      <p className="text-sm text-gray-600">{record.prize.description}</p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">
+                      支付平台
+                    </label>
+                    <div className="flex space-x-4">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="platform"
+                          value="wechat"
+                          checked={receiptForm.platform === 'wechat'}
+                          onChange={(e) =>
+                            setReceiptForm({ ...receiptForm, platform: 'wechat' })
+                          }
+                          className="mr-2"
+                        />
+                        <span>微信支付</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="platform"
+                          value="alipay"
+                          checked={receiptForm.platform === 'alipay'}
+                          onChange={(e) =>
+                            setReceiptForm({ ...receiptForm, platform: 'alipay' })
+                          }
+                          className="mr-2"
+                        />
+                        <span>支付宝</span>
+                      </label>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-mono text-gray-700 bg-white px-3 py-1 rounded border">
-                      {record.verificationCode}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      向工作人员出示此码兑奖
-                    </p>
+
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">
+                      交易单号
+                    </label>
+                    <input
+                      type="text"
+                      value={receiptForm.transactionId}
+                      onChange={(e) =>
+                        setReceiptForm({ ...receiptForm, transactionId: e.target.value })
+                      }
+                      placeholder="请输入微信/支付宝交易单号"
+                      className="input-field"
+                    />
+                  </div>
+
+                  <button onClick={handleUploadReceipt} className="btn-secondary w-full">
+                    验证并获取次数
+                  </button>
+
+                  <p className="text-xs text-gray-500 text-center">
+                    每笔有效消费可获得1-3次抽奖机会，取决于消费地点
+                  </p>
+                </div>
+              </div>
+
+              <div className="card">
+                <div className="flex items-center mb-4">
+                  <Scan className="w-6 h-6 text-gold mr-2" />
+                  <h3 className="text-xl font-semibold">扫码核销</h3>
+                </div>
+
+                <p className="text-gray-400 mb-6">
+                  完成社媒发布后，扫描工作人员提供的二维码获取额外抽奖机会
+                </p>
+
+                <button
+                  onClick={() => navigate('/lottery/scan')}
+                  className="btn-primary w-full"
+                >
+                  打开扫码
+                </button>
+
+                <div className="mt-6 p-4 bg-primary rounded-lg">
+                  <p className="text-sm text-gray-400 mb-2">发布要求：</p>
+                  <ul className="text-sm text-gray-500 space-y-1">
+                    <li>• 小红书/抖音发布内容</li>
+                    <li>• 带指定话题 #北魏夜游生活节</li>
+                    <li>• 包含现场元素（照片/视频）</li>
+                    <li>• 向工作人员展示后扫码</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {showBindModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-primary-light rounded-xl w-full max-w-md mx-4 p-6">
+              <h3 className="text-2xl font-semibold mb-6 text-center">登录绑定</h3>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">
+                    <Phone className="inline mr-2 w-4 h-4" />
+                    手机号
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="请输入手机号"
+                    className="input-field"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">
+                    <CreditCard className="inline mr-2 w-4 h-4" />
+                    验证码
+                  </label>
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      placeholder="请输入验证码"
+                      className="input-field flex-1"
+                    />
+                    <button className="btn-secondary whitespace-nowrap">
+                      获取验证码
+                    </button>
                   </div>
                 </div>
-              ))}
+
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">
+                    <User className="inline mr-2 w-4 h-4" />
+                    姓名（选填）
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="请输入姓名"
+                    className="input-field"
+                  />
+                </div>
+
+                <button className="btn-primary w-full mt-6">确认绑定</button>
+
+                <button
+                  onClick={() => setShowBindModal(false)}
+                  className="w-full text-center text-gray-400 hover:text-white transition-colors"
+                >
+                  取消
+                </button>
+              </div>
             </div>
           </div>
         )}
 
-      </main>
+        {showResultModal && result && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-primary-light rounded-xl w-full max-w-lg mx-4 p-8 text-center animate-slide-up">
+              <div className="text-6xl mb-4">
+                {result.prize.level === 'hidden' ? '🎉' : '🎁'}
+              </div>
 
-      {showResultModal && result && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-lg shadow-2xl p-8">
-            <div className="text-center">
-              <div className="text-6xl mb-6">🎉</div>
-              <h2 className="text-3xl font-bold text-gray-800 mb-2">恭喜您！</h2>
-              <p className="text-xl font-semibold text-gray-700 mb-4">
-                {result.prize.name}
+              <p className={`text-3xl font-bold mb-4 ${getLevelColor(result.prize.level)}`}>
+                {getLevelName(result.prize.level)}
               </p>
-              <p className="text-gray-600 mb-6">{result.prize.description}</p>
 
-              <div className="bg-gray-100 rounded-lg p-6 mb-6">
-                <p className="text-sm text-gray-700 mb-2">您的核销码</p>
-                <p className="text-2xl font-mono font-bold text-gray-800">
+              <h3 className="text-2xl font-semibold mb-2">{result.prize.name}</h3>
+
+              <p className="text-gray-400 mb-6">{result.prize.description}</p>
+
+              <div className="bg-primary rounded-lg p-4 mb-6">
+                <p className="text-sm text-gray-400 mb-2">核销码</p>
+                <p className="text-2xl font-mono font-bold text-gold">
                   {result.verificationCode}
                 </p>
               </div>
@@ -387,14 +358,14 @@ export default function Lottery() {
                   setShowResultModal(false)
                   setResult(null)
                 }}
-                className="w-full bg-gray-800 text-white py-4 rounded-lg hover:bg-gray-700 transition-colors font-medium text-lg"
+                className="btn-primary"
               >
                 确定
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

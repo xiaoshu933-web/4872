@@ -1,45 +1,64 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
+const DEFAULT_CONFIG = {
+  mainTitle: '日落后出发',
+  activityTime: '夏季：6月15日至9月15日\n冬季：12月1日至次年3月10日',
+  organizer: '大同市人民政府',
+  undertaker: '大同市文化旅游投资集团有限公司、大同古城文化旅游发展有限公司',
+  locationLine1: '大同市平城区',
+  locationLine2: '大同古城',
+  copyright: '地球明天爆炸',
+  background1: '',
+  background2: '',
+  background3: '',
+}
+
+function loadConfig() {
+  try {
+    const saved = localStorage.getItem('night_festival_config')
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      return { ...DEFAULT_CONFIG, ...parsed }
+    }
+  } catch (e) {
+    console.error('加载配置失败:', e)
+  }
+  try {
+      const bg1 = localStorage.getItem('admin_background_1') || ''
+      const bg2 = localStorage.getItem('admin_background_2') || ''
+      const bg3 = localStorage.getItem('admin_background_3') || ''
+      const content = localStorage.getItem('admin_content')
+      if (content) {
+        try {
+          const parsedContent = JSON.parse(content)
+          return {
+            ...DEFAULT_CONFIG,
+            ...parsedContent,
+            background1: bg1,
+            background2: bg2,
+            background3: bg3,
+          }
+        } catch {}
+      }
+      return { ...DEFAULT_CONFIG, background1: bg1, background2: bg2, background3: bg3 }
+    } catch {
+      return DEFAULT_CONFIG
+    }
+  return DEFAULT_CONFIG
+}
+
 export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0)
-  const [contentConfig, setContentConfig] = useState({
-    mainTitle: '日落后出发',
-    activityTime: '夏季：6月15日至9月15日\n冬季：12月1日至次年3月10日',
-    organizer: '大同市人民政府',
-    undertaker: '大同市文化旅游投资集团有限公司、大同古城文化旅游发展有限公司',
-    locationLine1: '大同市平城区',
-    locationLine2: '大同古城',
-  })
+  const [config, setConfig] = useState(DEFAULT_CONFIG)
 
   useEffect(() => {
-    const savedConfig = localStorage.getItem('admin_content')
-    if (savedConfig) {
-      try {
-        const config = JSON.parse(savedConfig)
-        setContentConfig({
-          mainTitle: config.mainTitle || '日落后出发',
-          activityTime:
-            config.activityTime ||
-            '夏季：6月15日至9月15日\n冬季：12月1日至次年3月10日',
-          organizer: config.organizer || '大同市人民政府',
-          undertaker:
-            config.undertaker ||
-            '大同市文化旅游投资集团有限公司、大同古城文化旅游发展有限公司',
-          locationLine1: config.locationLine1 || '大同市平城区',
-          locationLine2: config.locationLine2 || '大同古城',
-        })
-      } catch (e) {
-        console.log('Error parsing config:', e)
-      }
-    }
+    setConfig(loadConfig())
   }, [])
 
-  const backgrounds = [
-    localStorage.getItem('admin_background_1') || '',
-    localStorage.getItem('admin_background_2') || '',
-    localStorage.getItem('admin_background_3') || '',
-  ]
+  const backgrounds = [config.background1, config.background2, config.background3].filter(
+    (bg) => bg && bg.length > 0
+  )
 
   const isValidBackground = (bg: string) => {
     return bg && (bg.startsWith('http') || bg.startsWith('#') || bg.startsWith('data:'))
@@ -81,7 +100,7 @@ export default function Home() {
         <div className="relative z-10 h-screen flex items-end justify-end">
           <div className="container mx-auto px-8 pb-16">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-white drop-shadow-lg text-right">
-              {contentConfig.mainTitle}
+              {config.mainTitle}
             </h1>
           </div>
         </div>
@@ -114,15 +133,15 @@ export default function Home() {
             <div className="text-center">
               <p className="text-lg font-medium text-gray-800 mb-3">📍 活动地点</p>
               <div className="space-y-1">
-                <p className="text-gray-700 text-xl">{contentConfig.locationLine1}</p>
-                <p className="text-gray-700 text-xl">{contentConfig.locationLine2}</p>
+                <p className="text-gray-700 text-xl">{config.locationLine1}</p>
+                <p className="text-gray-700 text-xl">{config.locationLine2}</p>
               </div>
             </div>
 
             <div className="text-center">
               <p className="text-lg font-medium text-gray-800 mb-4">🕐 活动时间</p>
               <div className="space-y-2">
-                {contentConfig.activityTime
+                {config.activityTime
                   .split('\n')
                   .map((line, index) => (
                     <p key={index} className="text-gray-700 text-xl">
@@ -136,10 +155,10 @@ export default function Home() {
               <p className="text-lg font-medium text-gray-800 mb-4">🏛️ 组织单位</p>
               <div className="space-y-3 text-center">
                 <p className="text-gray-700 font-medium text-lg">
-                  主办单位：{contentConfig.organizer}
+                  主办单位：{config.organizer}
                 </p>
                 <p className="text-gray-600">
-                  承办单位：{contentConfig.undertaker}
+                  承办单位：{config.undertaker}
                 </p>
               </div>
             </div>
