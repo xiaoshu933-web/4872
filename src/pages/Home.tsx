@@ -6,6 +6,16 @@ export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [config, setConfig] = useState(DEFAULT_CONFIG)
   const [loading, setLoading] = useState(true)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -20,9 +30,13 @@ export default function Home() {
     }
   }, [])
 
-  const backgrounds = [config.background1, config.background2, config.background3].filter(
-    (bg) => bg && bg.length > 0
-  )
+  const backgrounds = isMobile
+    ? [config.mobileBackground1, config.mobileBackground2, config.mobileBackground3].filter(
+        (bg) => bg && bg.length > 0
+      )
+    : [config.background1, config.background2, config.background3].filter(
+        (bg) => bg && bg.length > 0
+      )
 
   const isValidBackground = (bg: string) => {
     return bg && (bg.startsWith('http') || bg.startsWith('#') || bg.startsWith('data:'))

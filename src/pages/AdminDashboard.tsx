@@ -17,6 +17,7 @@ import {
   X,
   Palette,
   Download,
+  Smartphone,
 } from 'lucide-react'
 import { loadConfig, saveConfig, downloadConfigFile, DEFAULT_CONFIG } from '@/utils/config'
 
@@ -62,13 +63,7 @@ export default function AdminDashboard() {
   const [editingPrize, setEditingPrize] = useState<Prize | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
 
-  const backgrounds = [
-    { index: 1, url: config.background1 },
-    { index: 2, url: config.background2 },
-    { index: 3, url: config.background3 },
-  ]
-
-  const handleImageUpload = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (key: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -80,26 +75,26 @@ export default function AdminDashboard() {
     const reader = new FileReader()
     reader.onload = (event) => {
       const url = event.target?.result as string
-      const bgKey = `background${index}` as keyof typeof DEFAULT_CONFIG
-      const newConfig = { ...config, [bgKey]: url }
+      const newConfig = { ...config, [key]: url }
       setConfig(newConfig)
       saveConfig(newConfig)
+      localStorage.setItem(`admin_${key}`, url)
     }
     reader.readAsDataURL(file)
   }
 
-  const handleUrlInput = (index: number, url: string) => {
-    const bgKey = `background${index}` as keyof typeof DEFAULT_CONFIG
-    const newConfig = { ...config, [bgKey]: url }
+  const handleUrlInput = (key: string, url: string) => {
+    const newConfig = { ...config, [key]: url }
     setConfig(newConfig)
     saveConfig(newConfig)
+    localStorage.setItem(`admin_${key}`, url)
   }
 
-  const clearBackground = (index: number) => {
-    const bgKey = `background${index}` as keyof typeof DEFAULT_CONFIG
-    const newConfig = { ...config, [bgKey]: '' }
+  const clearBackground = (key: string) => {
+    const newConfig = { ...config, [key]: '' }
     setConfig(newConfig)
     saveConfig(newConfig)
+    localStorage.removeItem(`admin_${key}`)
   }
 
   const handleSaveContent = () => {
@@ -365,36 +360,6 @@ export default function AdminDashboard() {
 
                   <div>
                     <label className="block text-sm text-gray-700 mb-2 font-medium">
-                      主办单位
-                    </label>
-                    <input
-                      type="text"
-                      value={config.organizer}
-                      onChange={(e) =>
-                        setConfig({ ...config, organizer: e.target.value })
-                      }
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-600 transition-colors bg-white"
-                      style={{ color: '#1f2937' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-gray-700 mb-2 font-medium">
-                      承办单位
-                    </label>
-                    <textarea
-                      value={config.undertaker}
-                      onChange={(e) =>
-                        setConfig({ ...config, undertaker: e.target.value })
-                      }
-                      rows={2}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-600 transition-colors bg-white resize-none"
-                      style={{ color: '#1f2937' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-gray-700 mb-2 font-medium">
                       版权信息
                     </label>
                     <input
@@ -440,17 +405,22 @@ export default function AdminDashboard() {
               <div className="bg-white rounded-xl shadow-sm p-8 mb-6">
                 <div className="flex items-center mb-6">
                   <Image className="w-6 h-6 text-gray-700 mr-2" />
-                  <h3 className="text-xl font-semibold text-gray-800">轮播背景图片</h3>
+                  <h3 className="text-xl font-semibold text-gray-800">电脑端背景图片</h3>
                 </div>
+                <p className="text-sm text-gray-500 mb-4">建议尺寸 1920x1080，单张不超过 2MB</p>
 
                 <div className="space-y-6">
-                  {backgrounds.map((bg) => (
-                    <div key={bg.index} className="border border-gray-200 rounded-xl p-6">
+                  {[
+                    { key: 'background1', url: config.background1, index: 1 },
+                    { key: 'background2', url: config.background2, index: 2 },
+                    { key: 'background3', url: config.background3, index: 3 },
+                  ].map((bg) => (
+                    <div key={bg.key} className="border border-gray-200 rounded-xl p-6">
                       <div className="flex items-center justify-between mb-4">
-                        <h4 className="font-semibold text-gray-800">背景图片 {bg.index}</h4>
+                        <h4 className="font-semibold text-gray-800">电脑背景 {bg.index}</h4>
                         {bg.url && (
                           <button
-                            onClick={() => clearBackground(bg.index)}
+                            onClick={() => clearBackground(bg.key)}
                             className="flex items-center text-red-500 hover:text-red-600 transition-colors"
                           >
                             <Trash2 className="w-4 h-4 mr-1" />
@@ -463,20 +433,14 @@ export default function AdminDashboard() {
                         <input
                           type="file"
                           accept="image/*"
-                          onChange={(e) => handleImageUpload(bg.index, e)}
+                          onChange={(e) => handleImageUpload(bg.key, e)}
                           className="hidden"
-                          id={`image-upload-${bg.index}`}
+                          id={`image-upload-${bg.key}`}
                         />
-                        <label
-                          htmlFor={`image-upload-${bg.index}`}
-                          className="cursor-pointer"
-                        >
+                        <label htmlFor={`image-upload-${bg.key}`} className="cursor-pointer">
                           <Upload className="w-12 h-12 mx-auto mb-3 text-gray-400" />
                           <p className="text-gray-700 mb-1">
                             {bg.url ? '点击更换图片' : '点击上传图片'}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            支持 JPG、PNG、GIF 格式，建议尺寸 1920x1080，单张不超过 2MB
                           </p>
                         </label>
                       </div>
@@ -488,7 +452,7 @@ export default function AdminDashboard() {
                         <input
                           type="text"
                           value={bg.url}
-                          onChange={(e) => handleUrlInput(bg.index, e.target.value)}
+                          onChange={(e) => handleUrlInput(bg.key, e.target.value)}
                           placeholder="https://example.com/image.jpg"
                           className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-600 transition-colors bg-white"
                           style={{ color: '#1f2937' }}
@@ -497,66 +461,90 @@ export default function AdminDashboard() {
 
                       {bg.url && (
                         <div className="mt-4">
-                          <label className="block text-sm text-gray-700 mb-2 font-medium">
-                            预览
-                          </label>
+                          <label className="block text-sm text-gray-700 mb-2 font-medium">预览</label>
                           <div className="relative rounded-lg overflow-hidden shadow-md">
-                            <img
-                              src={bg.url}
-                              alt={`背景 ${bg.index} 预览`}
-                              className="w-full h-48 object-cover"
-                            />
+                            <img src={bg.url} alt={`背景 ${bg.index} 预览`} className="w-full h-48 object-cover" />
                           </div>
                         </div>
                       )}
                     </div>
                   ))}
-
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                    <p className="text-sm text-blue-700">
-                      <strong>提示：</strong>上传2张或以上图片后，首页会自动开启轮播效果，
-                      每5秒自动切换一次，也可以点击底部小圆点手动切换。配置会自动保存。
-                    </p>
-                  </div>
                 </div>
               </div>
 
               <div className="bg-white rounded-xl shadow-sm p-8 mb-6">
                 <div className="flex items-center mb-6">
-                  <Palette className="w-6 h-6 text-gray-700 mr-2" />
-                  <h3 className="text-xl font-semibold text-gray-800">纯色背景备选</h3>
+                  <Smartphone className="w-6 h-6 text-gray-700 mr-2" />
+                  <h3 className="text-xl font-semibold text-gray-800">手机端背景图片</h3>
+                </div>
+                <p className="text-sm text-gray-500 mb-4">建议尺寸 1080x1920（竖版），单张不超过 2MB</p>
+
+                <div className="space-y-6">
+                  {[
+                    { key: 'mobileBackground1', url: config.mobileBackground1, index: 1 },
+                    { key: 'mobileBackground2', url: config.mobileBackground2, index: 2 },
+                    { key: 'mobileBackground3', url: config.mobileBackground3, index: 3 },
+                  ].map((bg) => (
+                    <div key={bg.key} className="border border-gray-200 rounded-xl p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="font-semibold text-gray-800">手机背景 {bg.index}</h4>
+                        {bg.url && (
+                          <button
+                            onClick={() => clearBackground(bg.key)}
+                            className="flex items-center text-red-500 hover:text-red-600 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            删除
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50 hover:border-gray-500 transition-colors">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleImageUpload(bg.key, e)}
+                          className="hidden"
+                          id={`image-upload-${bg.key}`}
+                        />
+                        <label htmlFor={`image-upload-${bg.key}`} className="cursor-pointer">
+                          <Upload className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                          <p className="text-gray-700 mb-1">
+                            {bg.url ? '点击更换图片' : '点击上传图片'}
+                          </p>
+                        </label>
+                      </div>
+
+                      <div className="mt-4">
+                        <label className="block text-sm text-gray-700 mb-2 font-medium">
+                          或输入图片URL
+                        </label>
+                        <input
+                          type="text"
+                          value={bg.url}
+                          onChange={(e) => handleUrlInput(bg.key, e.target.value)}
+                          placeholder="https://example.com/mobile-image.jpg"
+                          className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-600 transition-colors bg-white"
+                          style={{ color: '#1f2937' }}
+                        />
+                      </div>
+
+                      {bg.url && (
+                        <div className="mt-4">
+                          <label className="block text-sm text-gray-700 mb-2 font-medium">预览</label>
+                          <div className="relative rounded-lg overflow-hidden shadow-md flex justify-center">
+                            <img src={bg.url} alt={`手机背景 ${bg.index} 预览`} className="h-64 object-cover" style={{ maxWidth: '150px' }} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
 
-                <p className="text-sm text-gray-600 mb-4">
-                  点击下方颜色可将其设为背景1（如果想使用纯色背景）
-                </p>
-
-                <div className="grid grid-cols-8 gap-3">
-                  {[
-                    '#1a1a2e',
-                    '#16213e',
-                    '#0f3460',
-                    '#2c3e50',
-                    '#34495e',
-                    '#7f8c8d',
-                    '#95a5a6',
-                    '#bdc3c7',
-                    '#c0392b',
-                    '#e74c3c',
-                    '#d35400',
-                    '#e67e22',
-                    '#f39c12',
-                    '#27ae60',
-                    '#16a085',
-                    '#2980b9',
-                  ].map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => handleUrlInput(1, color)}
-                      className="w-full aspect-square rounded-lg shadow-sm hover:scale-105 transition-transform border-2 border-gray-200"
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-6">
+                  <p className="text-sm text-blue-700">
+                    <strong>提示：</strong>系统会根据访客设备自动选择对应背景。手机端优先使用手机背景，如未设置则使用电脑背景。
+                  </p>
                 </div>
               </div>
 
