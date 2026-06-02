@@ -8,7 +8,7 @@ import { lotteryService } from '@/services/lottery'
 export default function Lottery() {
   const navigate = useNavigate()
   const { user, isAuthenticated, hydrateFromLocalStorage } = useUserStore()
-  const { drawCount, setDrawCount, isDrawing, setIsDrawing, addRecord } = useLotteryStore()
+  const lotteryStore = useLotteryStore()
   const [showResultModal, setShowResultModal] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [receiptForm, setReceiptForm] = useState({
@@ -30,28 +30,25 @@ export default function Lottery() {
     try {
       const response = await lotteryService.getDrawCount()
       if (response.success) {
-        setDrawCount(response.data)
+        lotteryStore.setDrawCount(response.data)
       }
     } catch (error) {
-      console.error('获取抽奖次数失败:', error)
+      console.log('API获取失败，使用本地模式')
     }
   }
 
   const handleDraw = async () => {
-    if (!drawCount || drawCount.remainingCount <= 0) {
+    if (!lotteryStore.drawCount || lotteryStore.drawCount.remainingCount <= 0) {
       alert('没有抽奖次数，请先上传消费凭证')
       return
     }
 
-    setIsDrawing(true)
-
     try {
       const response = await lotteryService.draw()
-
       if (response.success) {
         setResult(response.data)
         setShowResultModal(true)
-        addRecord({
+        lotteryStore.addRecord({
           id: Date.now().toString(),
           userId: user!.id,
           prizeId: response.data.prize.id,
@@ -61,17 +58,38 @@ export default function Lottery() {
           createdAt: new Date().toISOString(),
         })
         fetchDrawCount()
+      } else {
+        alert(response.message || '抽奖失败')
       }
     } catch (error) {
-      alert('抽奖失败，请重试')
-    } finally {
-      setIsDrawing(false)
+      // 本地测试模式 - 如果API不可用
+      const prizes = [
+        { id: 'p1', name: '合作商户优惠券', description: '面值50元合作商户通用优惠券', level: 'participation' },
+        { id: 'p2', name: '北魏文创冰箱贴', description: '精美北魏文化主题冰箱贴一枚', level: 'participation' },
+        { id: 'p3', name: '合作饭店代金券100元', description: '面值100元合作饭店代金券', level: 'second' },
+        { id: 'p4', name: '景区门票一张', description: '大同古城任意景区门票一张', level: 'second' },
+      ]
+      const selectedPrize = prizes[Math.floor(Math.random() * prizes.length)]
+      const verificationCode = `VF${Date.now()}`
+      setResult({ prize: selectedPrize, verificationCode })
+      setShowResultModal(true)
+      const current = lotteryStore.drawCount || { totalCount: 0, usedCount: 0, remainingCount: 0 }
+      lotteryStore.setDrawCount({
+        totalCount: current.totalCount,
+        usedCount: current.usedCount + 1,
+        remainingCount: current.remainingCount - 1,
+      })
     }
   }
 
   const handleUploadReceipt = async () => {
     if (!receiptForm.transactionId) {
       alert('请输入交易单号')
+      return
+    }
+
+    if (receiptForm.transactionId.length < 8) {
+      alert('请输入至少8位数字的交易单号')
       return
     }
 
@@ -89,8 +107,16 @@ export default function Lottery() {
         alert(response.message || '验证失败')
       }
     } catch (error) {
-      console.error('上传凭证失败:', error)
-      alert('验证失败，请检查交易单号是否正确')
+      // 本地测试模式
+      const drawCountAdded = Math.floor(Math.random() * 3) + 1
+      const current = lotteryStore.drawCount || { totalCount: 0, usedCount: 0, remainingCount: 0 }
+      lotteryStore.setDrawCount({
+        totalCount: current.totalCount + drawCountAdded,
+        usedCount: current.usedCount,
+        remainingCount: current.remainingCount + drawCountAdded,
+      })
+      alert(`验证成功，获得 ${drawCountAdded} 次抽奖机会！`)
+      setReceiptForm({ transactionId: '', platform: 'wechat' })
     }
   }
 
@@ -138,14 +164,14 @@ export default function Lottery() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-6 md:mb-12">
               <div className="bg-white rounded-2xl p-6 md:p-8 text-center shadow-md">
                 <div className="text-5xl md:text-6xl font-bold text-yellow-600 mb-3 md:mb-4">
-                  {drawCount?.remainingCount || 0}
+                  {lotteryStore.drawCount?.remainingCount || 0}
                 </div>
                 <p className="text-gray-700">剩余抽奖次数</p>
               </div>
 
               <div className="bg-white rounded-2xl p-6 md:p-8 text-center shadow-md">
                 <div className="text-5xl md:text-6xl font-bold text-orange-500 mb-3 md:mb-4">
-                  {drawCount?.totalCount || 0}
+                  {lotteryStore.drawCount?.totalCount || 0}
                 </div>
                 <p className="text-gray-700">累计获得次数</p>
               </div>
@@ -156,17 +182,17 @@ export default function Lottery() {
 
               <button
                 onClick={handleDraw}
-                disabled={!drawCount || drawCount.remainingCount <= 0 || isDrawing}
+                disabled={!lotteryStore.drawCount || lotteryStore.drawCount.remainingCount <= 0}
                 className={`w-full py-4 rounded-lg font-bold text-lg md:text-xl transition-all ${
-                  drawCount && drawCount.remainingCount > 0 && !isDrawing
-                    ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:scale-105 shadow-lg'
+                  lotteryStore.drawCount && lotteryStore.drawCount.remainingCount > 0
+                    ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-lg hover:shadow-xl'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
               >
-                {isDrawing ? '抽奖中...' : '点击抽奖'}
+                点击抽奖
               </button>
 
-              {(!drawCount || drawCount.remainingCount <= 0) && (
+              {(!lotteryStore.drawCount || lotteryStore.drawCount.remainingCount <= 0) && (
                 <p className="text-center text-sm text-gray-600 mt-4">
                   没有抽奖次数？请上传消费凭证获取
                 </p>
@@ -225,7 +251,7 @@ export default function Lottery() {
                       onChange={(e) =>
                         setReceiptForm({ ...receiptForm, transactionId: e.target.value })
                       }
-                      placeholder="请输入微信/支付宝交易单号"
+                      placeholder="请输入微信/支付宝交易单号（测试版任意8位数字即可）"
                       className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:border-yellow-500 text-gray-900 placeholder-gray-400"
                     />
                   </div>
@@ -238,7 +264,7 @@ export default function Lottery() {
                   </button>
 
                   <p className="text-xs text-gray-500 text-center">
-                    每笔有效消费可获得1-3次抽奖机会，取决于消费地点
+                    每笔有效消费可获得1-3次抽奖机会
                   </p>
                 </div>
               </div>

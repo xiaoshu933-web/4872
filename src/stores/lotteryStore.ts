@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import type { Prize, LotteryRecord, DrawCount } from '@/types'
 
 interface LotteryState {
@@ -14,33 +15,40 @@ interface LotteryState {
   decrementDrawCount: () => void
 }
 
-export const useLotteryStore = create<LotteryState>((set) => ({
-  drawCount: null,
-  prizes: [],
-  records: [],
-  isDrawing: false,
+export const useLotteryStore = create<LotteryState>()(
+  persist(
+    (set) => ({
+      drawCount: null,
+      prizes: [],
+      records: [],
+      isDrawing: false,
 
-  setDrawCount: (count) => set({ drawCount: count }),
+      setDrawCount: (count) => set({ drawCount: count }),
 
-  setPrizes: (prizes) => set({ prizes }),
+      setPrizes: (prizes) => set({ prizes }),
 
-  addRecord: (record) =>
-    set((state) => ({
-      records: [record, ...state.records],
-    })),
+      addRecord: (record) =>
+        set((state) => ({
+          records: [record, ...state.records],
+        })),
 
-  setRecords: (records) => set({ records }),
+      setRecords: (records) => set({ records }),
 
-  setIsDrawing: (isDrawing) => set({ isDrawing }),
+      setIsDrawing: (isDrawing) => set({ isDrawing }),
 
-  decrementDrawCount: () =>
-    set((state) => ({
-      drawCount: state.drawCount
-        ? {
-            ...state.drawCount,
-            usedCount: state.drawCount.usedCount + 1,
-            remainingCount: state.drawCount.remainingCount - 1,
-          }
-        : null,
-    })),
-}))
+      decrementDrawCount: () =>
+        set((state) => ({
+          drawCount: state.drawCount
+            ? {
+                ...state.drawCount,
+                usedCount: state.drawCount.usedCount + 1,
+                remainingCount: state.drawCount.remainingCount - 1,
+              }
+            : null,
+        })),
+    }),
+    {
+      name: 'lottery-storage',
+    }
+  )
+)
