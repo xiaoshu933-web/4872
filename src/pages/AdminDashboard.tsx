@@ -18,6 +18,7 @@ import {
   Palette,
   Download,
   Smartphone,
+  Menu,
 } from 'lucide-react'
 import { loadConfig, saveConfig, downloadConfigFile, DEFAULT_CONFIG } from '@/utils/config'
 
@@ -36,6 +37,7 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('content')
   const [config, setConfig] = useState(DEFAULT_CONFIG)
   const [loading, setLoading] = useState(true)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -215,34 +217,51 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-6">
+      <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button
+              className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              <Menu className="w-6 h-6 text-gray-700" />
+            </button>
             <Link
               to="/"
               className="flex items-center text-gray-700 hover:text-gray-900 transition-colors font-medium"
             >
               <HomeIcon className="w-5 h-5 mr-2" />
-              返回首页
+              <span className="hidden sm:inline">返回首页</span>
             </Link>
-            <h1 className="text-xl font-serif font-bold text-gray-800 flex items-center">
+            <h1 className="text-lg sm:text-xl font-serif font-bold text-gray-800 flex items-center">
               <Settings className="w-5 h-5 mr-2" />
               管理后台
             </h1>
           </div>
           <button
             onClick={handleLogout}
-            className="flex items-center px-4 py-2 border border-gray-300 rounded hover:bg-gray-100 transition-colors text-gray-700"
+            className="flex items-center px-3 py-2 border border-gray-300 rounded hover:bg-gray-100 transition-colors text-gray-700 text-sm"
           >
             <LogOut className="w-4 h-4 mr-2" />
-            退出登录
+            <span className="hidden sm:inline">退出登录</span>
           </button>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8 flex">
-        <aside className="w-64 mr-8">
-          <nav className="bg-white rounded-xl shadow-sm p-4 space-y-1">
+      {/* 移动端菜单覆盖层 */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        ></div>
+      )}
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex">
+        {/* 侧边栏 - 移动端显示为滑出菜单 */}
+        <aside className={`w-64 mr-0 sm:mr-8 lg:w-64 lg:mr-8 fixed lg:static inset-y-0 left-0 z-50 transform transition-transform duration-300 lg:transform-none ${
+          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}>
+          <nav className="bg-white rounded-xl shadow-sm p-4 space-y-1 lg:mt-0 mt-2 mx-4 w-[256px] lg:w-full">
             {[
               { id: 'content', icon: Type, label: '内容管理' },
               { id: 'background', icon: Image, label: '背景设置' },
@@ -251,7 +270,10 @@ export default function AdminDashboard() {
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id)
+                  setMobileMenuOpen(false)
+                }}
                 className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                   activeTab === tab.id
                     ? 'bg-gray-800 text-white'
@@ -265,7 +287,7 @@ export default function AdminDashboard() {
           </nav>
         </aside>
 
-        <main className="flex-1">
+        <main className="flex-1 lg:ml-0">
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
             <h4 className="font-semibold text-yellow-800 mb-2 flex items-center">
               <Palette className="w-4 h-4 mr-2" />
@@ -585,76 +607,78 @@ export default function AdminDashboard() {
               </div>
 
               <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">奖品名称</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">等级</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">描述</th>
-                      <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">概率(%)</th>
-                      <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">库存</th>
-                      <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">状态</th>
-                      <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {prizes.map((prize) => (
-                      <tr key={prize.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4">
-                          <span className="font-medium text-gray-800">{prize.name}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getLevelColor(prize.level)}`}>
-                            {getLevelText(prize.level)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-gray-600">{prize.description}</span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="text-gray-800">{prize.probability}</span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className={prize.stock > 10 ? 'text-green-600' : prize.stock > 0 ? 'text-yellow-600' : 'text-red-600'}>
-                            {prize.stock}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <button
-                            onClick={() => {
-                              const newStatus = prize.status === 'active' ? 'inactive' : 'active'
-                              setPrizes(prizes.map(p => p.id === prize.id ? { ...p, status: newStatus as 'active' | 'inactive' } : p))
-                            }}
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${prize.status === 'active' ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                          >
-                            {prize.status === 'active' ? '启用' : '禁用'}
-                          </button>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center justify-center space-x-2">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[640px]">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-sm font-semibold text-gray-700">奖品名称</th>
+                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-sm font-semibold text-gray-700">等级</th>
+                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-sm font-semibold text-gray-700">描述</th>
+                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-center text-sm font-semibold text-gray-700">概率(%)</th>
+                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-center text-sm font-semibold text-gray-700">库存</th>
+                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-center text-sm font-semibold text-gray-700">状态</th>
+                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-center text-sm font-semibold text-gray-700">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {prizes.map((prize) => (
+                        <tr key={prize.id} className="hover:bg-gray-50">
+                          <td className="px-4 sm:px-6 py-3 sm:py-4">
+                            <span className="font-medium text-gray-800">{prize.name}</span>
+                          </td>
+                          <td className="px-4 sm:px-6 py-3 sm:py-4">
+                            <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${getLevelColor(prize.level)}`}>
+                              {getLevelText(prize.level)}
+                            </span>
+                          </td>
+                          <td className="px-4 sm:px-6 py-3 sm:py-4">
+                            <span className="text-gray-600 text-sm">{prize.description}</span>
+                          </td>
+                          <td className="px-4 sm:px-6 py-3 sm:py-4 text-center">
+                            <span className="text-gray-800">{prize.probability}</span>
+                          </td>
+                          <td className="px-4 sm:px-6 py-3 sm:py-4 text-center">
+                            <span className={prize.stock > 10 ? 'text-green-600' : prize.stock > 0 ? 'text-yellow-600' : 'text-red-600'}>
+                              {prize.stock}
+                            </span>
+                          </td>
+                          <td className="px-4 sm:px-6 py-3 sm:py-4 text-center">
                             <button
                               onClick={() => {
-                                setEditingPrize(prize)
-                                setShowAddModal(true)
+                                const newStatus = prize.status === 'active' ? 'inactive' : 'active'
+                                setPrizes(prizes.map(p => p.id === prize.id ? { ...p, status: newStatus as 'active' | 'inactive' } : p))
                               }}
-                              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-                              title="编辑"
+                              className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${prize.status === 'active' ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                             >
-                              <Edit2 className="w-4 h-4" />
+                              {prize.status === 'active' ? '启用' : '禁用'}
                             </button>
-                            <button
-                              onClick={() => handleDeletePrize(prize.id)}
-                              className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                              title="删除"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          </td>
+                          <td className="px-4 sm:px-6 py-3 sm:py-4">
+                            <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                              <button
+                                onClick={() => {
+                                  setEditingPrize(prize)
+                                  setShowAddModal(true)
+                                }}
+                                className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                                title="编辑"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeletePrize(prize.id)}
+                                className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                                title="删除"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
@@ -662,13 +686,13 @@ export default function AdminDashboard() {
           {activeTab === 'stats' && (
             <div>
               <div className="mb-8">
-                <h2 className="text-2xl font-serif font-bold mb-2 text-gray-800">
+                <h2 className="text-xl sm:text-2xl font-serif font-bold mb-2 text-gray-800">
                   数据统计
                 </h2>
                 <p className="text-gray-600">活动数据概览</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
                 {[
                   { label: '总参与人数', value: '12,345', icon: Users },
                   { label: '总抽奖次数', value: '45,678', icon: Gift },
@@ -684,9 +708,9 @@ export default function AdminDashboard() {
                 ))}
               </div>
 
-              <div className="bg-white rounded-xl shadow-sm p-8">
-                <h3 className="text-xl font-semibold mb-6 text-gray-800">数据导出</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h3 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6 text-gray-800">数据导出</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   <button
                     onClick={() => handleExportData('users')}
                     className="border-2 border-gray-300 text-gray-800 py-4 rounded-lg hover:bg-gray-50 hover:border-gray-500 transition-colors font-medium"
