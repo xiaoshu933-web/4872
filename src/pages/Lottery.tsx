@@ -225,24 +225,6 @@ export default function Lottery() {
               )}
             </div>
 
-            {/* 奖品展示区 */}
-            <div style={{ ...CARD_STYLE, marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '20px', color: '#111827', textAlign: 'center' }}>🎁 奖品池</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-                {prizes.map((prize, index) => (
-                  <div key={index} style={{ backgroundColor: '#f9fafb', borderRadius: '12px', padding: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: prize.color, padding: '2px 8px', backgroundColor: 'rgba(234, 179, 8, 0.1)', borderRadius: '12px' }}>
-                        {prize.level}
-                      </span>
-                    </div>
-                    <h4 style={{ fontSize: '16px', fontWeight: 600, color: '#111827', marginBottom: '4px' }}>{prize.name}</h4>
-                    <p style={{ fontSize: '14px', color: '#6b7280' }}>{prize.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* 下方两个功能区块 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '32px' }}>
               {/* 上传消费凭证 */}
