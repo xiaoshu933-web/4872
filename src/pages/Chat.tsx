@@ -26,7 +26,13 @@ export default function Chat() {
   useEffect(() => {
     const savedMessages = localStorage.getItem(`chat_messages_${visitorKey}`)
     if (savedMessages) {
-      setMessages(JSON.parse(savedMessages))
+      const parsedMessages = JSON.parse(savedMessages)
+      // 如果只有初始欢迎消息，更新时间为当前时间
+      if (parsedMessages.length === 1 && parsedMessages[0].id === '1') {
+        parsedMessages[0].timestamp = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+        localStorage.setItem(`chat_messages_${visitorKey}`, JSON.stringify(parsedMessages))
+      }
+      setMessages(parsedMessages)
     } else {
       const initialMessages: Message[] = [
         {
