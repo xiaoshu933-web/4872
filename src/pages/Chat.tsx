@@ -10,20 +10,7 @@ interface Message {
   visitorId: string
 }
 
-const formatTime = (timestamp: string): string => {
-  const now = new Date()
-  const msgTime = new Date()
-  
-  const [hours, minutes] = timestamp.split(':').map(Number)
-  msgTime.setHours(hours, minutes, 0, 0)
-  
-  const diffMinutes = Math.floor((now.getTime() - msgTime.getTime()) / 60000)
-  
-  if (diffMinutes < 1) return '刚刚'
-  if (diffMinutes < 60) return `${diffMinutes}分钟前`
-  if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}小时前`
-  return timestamp
-}
+
 
 export default function Chat() {
   const navigate = useNavigate()
@@ -226,7 +213,7 @@ export default function Chat() {
                       message.sender === 'staff' ? 'text-gray-500' : 'text-gray-400'
                     }`}
                   >
-                    {formatTime(message.timestamp)}
+                    {message.timestamp}
                   </span>
                 </div>
               </div>
