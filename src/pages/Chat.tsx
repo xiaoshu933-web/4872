@@ -24,22 +24,24 @@ export default function Chat() {
   const visitorKey = `visitor_${visitorId}`
 
   useEffect(() => {
+    const currentTime = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
     const savedMessages = localStorage.getItem(`chat_messages_${visitorKey}`)
+    
     if (savedMessages) {
       const parsedMessages = JSON.parse(savedMessages)
-      // 如果只有初始欢迎消息，更新时间为当前时间
-      if (parsedMessages.length === 1 && parsedMessages[0].id === '1') {
-        parsedMessages[0].timestamp = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+      // 更新第一条客服消息的时间为当前时间
+      if (parsedMessages.length > 0 && parsedMessages[0].sender === 'staff') {
+        parsedMessages[0].timestamp = currentTime
         localStorage.setItem(`chat_messages_${visitorKey}`, JSON.stringify(parsedMessages))
       }
       setMessages(parsedMessages)
     } else {
       const initialMessages: Message[] = [
         {
-          id: '1',
+          id: Date.now().toString(),
           sender: 'staff',
           content: '您好！欢迎咨询"四八七十二·北魏夜游生活节"活动，有什么可以帮助您的？',
-          timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+          timestamp: currentTime,
           visitorId: visitorKey,
         },
       ]
