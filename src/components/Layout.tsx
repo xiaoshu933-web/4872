@@ -18,14 +18,29 @@ export default function Layout() {
   const [showChat, setShowChat] = useState(false)
   const [showLoginDropdown, setShowLoginDropdown] = useState(false)
   const [showUserDropdown, setShowUserDropdown] = useState(false)
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      content: '您好！欢迎咨询"四八七十二·北魏夜游生活节"活动，有什么可以帮助您的？',
-      time: '10:00',
-      isVisitor: false,
-    },
-  ])
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+
+  useEffect(() => {
+    if (chatMessages.length === 0) {
+      const currentTime = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+      setChatMessages([{
+        id: '1',
+        content: '您好！欢迎咨询"四八七十二·北魏夜游生活节"活动，有什么可以帮助您的？',
+        time: currentTime,
+        isVisitor: false,
+      }])
+    }
+  }, [chatMessages.length])
+
+  useEffect(() => {
+    if (showChat && chatMessages.length > 0 && chatMessages[0].isVisitor === false) {
+      const currentTime = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+      setChatMessages((prev) => [{
+        ...prev[0],
+        time: currentTime,
+      }, ...prev.slice(1)])
+    }
+  }, [showChat])
   const [chatInput, setChatInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
 
