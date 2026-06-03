@@ -262,8 +262,13 @@ export default function MyPage() {
                 <div key={record.id} className="bg-white rounded-xl shadow-sm p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h4 className="text-lg font-semibold text-gray-800">{record.prize?.name}</h4>
-                      <p className="text-gray-600 mt-1">{record.prize?.description}</p>
+                      <div className="flex items-center space-x-2 mb-1">
+                        <span className="text-xs font-medium text-yellow-600 bg-yellow-50 px-2 py-1 rounded">
+                          {record.prize?.level || '参与奖'}
+                        </span>
+                      </div>
+                      <h4 className="text-lg font-semibold text-gray-800">{record.prize?.name || record.prizeName || '未知奖品'}</h4>
+                      <p className="text-gray-600 mt-1">{record.prize?.description || '暂无描述'}</p>
                       <div className="flex items-center mt-2 text-sm text-yellow-600">
                         <Clock className="w-4 h-4 mr-1" />
                         待核销
@@ -300,8 +305,18 @@ export default function MyPage() {
                 <div key={record.id} className="bg-white rounded-xl shadow-sm p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h4 className="text-lg font-semibold text-gray-800">{record.prize?.name}</h4>
-                      <p className="text-gray-600 mt-1">{record.prize?.description}</p>
+                      <div className="flex items-center space-x-2 mb-1">
+                        <span className={`text-xs font-medium px-2 py-1 rounded ${
+                          record.prize?.level === '二等奖' ? 'text-blue-600 bg-blue-50' : 
+                          record.prize?.level === '一等奖' ? 'text-purple-600 bg-purple-50' :
+                          record.prize?.level === '隐藏大奖' ? 'text-yellow-600 bg-yellow-50' :
+                          'text-gray-600 bg-gray-100'
+                        }`}>
+                          {record.prize?.level || '参与奖'}
+                        </span>
+                      </div>
+                      <h4 className="text-lg font-semibold text-gray-800">{record.prize?.name || record.prizeName || '未知奖品'}</h4>
+                      <p className="text-gray-600 mt-1">{record.prize?.description || '暂无描述'}</p>
                       <p className="text-sm text-gray-500 mt-2">
                         {new Date(record.createdAt).toLocaleString()}
                       </p>
