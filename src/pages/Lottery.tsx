@@ -114,14 +114,20 @@ export default function Lottery() {
     setDrawData(newData)
     localStorage.setItem('lottery-counts', JSON.stringify(newData))
 
-    // 保存中奖记录
+    // 保存中奖记录（与个人中心同步）
     try {
       const records = JSON.parse(localStorage.getItem('lottery-records') || '[]')
       records.unshift({
         id: Date.now().toString(),
         userId: user?.id || '',
+        prize: {
+          name: selectedPrize.name,
+          description: selectedPrize.description,
+          level: selectedPrize.level,
+        },
         prizeName: selectedPrize.name,
         verificationCode,
+        isVerified: false,
         createdAt: new Date().toISOString(),
       })
       localStorage.setItem('lottery-records', JSON.stringify(records.slice(0, 50)))
@@ -217,6 +223,24 @@ export default function Lottery() {
                   没有抽奖次数？请上传消费凭证获取
                 </p>
               )}
+            </div>
+
+            {/* 奖品展示区 */}
+            <div style={{ ...CARD_STYLE, marginBottom: '32px' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '20px', color: '#111827', textAlign: 'center' }}>🎁 奖品池</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                {prizes.map((prize, index) => (
+                  <div key={index} style={{ backgroundColor: '#f9fafb', borderRadius: '12px', padding: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: prize.color, padding: '2px 8px', backgroundColor: 'rgba(234, 179, 8, 0.1)', borderRadius: '12px' }}>
+                        {prize.level}
+                      </span>
+                    </div>
+                    <h4 style={{ fontSize: '16px', fontWeight: 600, color: '#111827', marginBottom: '4px' }}>{prize.name}</h4>
+                    <p style={{ fontSize: '14px', color: '#6b7280' }}>{prize.description}</p>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* 下方两个功能区块 */}

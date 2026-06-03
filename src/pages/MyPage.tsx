@@ -25,7 +25,7 @@ export default function MyPage() {
 
     const phone = localStorage.getItem('visitorPhone') || localStorage.getItem('merchantPhone') || ''
     const savedInfo = localStorage.getItem('userInfo')
-    const savedRecords = localStorage.getItem('lotteryRecords')
+    const savedRecords = localStorage.getItem('lottery-records')
 
     if (savedInfo) {
       setUserInfo(JSON.parse(savedInfo))
@@ -45,7 +45,7 @@ export default function MyPage() {
     localStorage.removeItem('visitorPhone')
     localStorage.removeItem('merchantPhone')
     localStorage.removeItem('lotteryCount')
-    localStorage.removeItem('lotteryRecords')
+    localStorage.removeItem('lottery-records')
     navigate('/')
   }
 
